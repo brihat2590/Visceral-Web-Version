@@ -1,65 +1,119 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+
+export default function VisceralLanding() {
+  const containerRef = useRef(null);
+  
+  // Track scroll progress over the height of the hero section
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  // Scale the circle from a contained shape to 3x its size to "fill" the screen
+  const circleScale = useTransform(scrollYProgress, [0, 0.8], [1, 3.5]);
+  // Fade out the hero text as the circle expands
+  const textOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+  // Move the dashboard image up as we scroll
+  const imageY = useTransform(scrollYProgress, [0, 1], [0, -100]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="bg-[#0a0a0a] text-white overflow-x-hidden">
+      {/* Sticky Container: 
+          h-[200vh] creates the scroll length required for the animation.
+      */}
+      <div ref={containerRef} className="relative h-[250vh]">
+        <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-start overflow-hidden pt-20">
+          
+          {/* 1. The Expanding Circle Background */}
+          <motion.div 
+            style={{ scale: circleScale }}
+            className="absolute top-[-10%] w-[1200px] aspect-square rounded-full z-0 pointer-events-none"
+            innerref={null}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            {/* The Gradient Fill mimicking your image */}
+            <div className="w-full h-full rounded-full bg-gradient-to-b from-[#6366f1] via-[#a855f7] to-[#ec4899] opacity-20 blur-[80px]" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-500/30 to-transparent" />
+          </motion.div>
+
+          {/* 2. Hero Text Content */}
+          <motion.div 
+            style={{ opacity: textOpacity }}
+            className="relative z-10 text-center px-6 mt-10"
           >
-            Documentation
-          </a>
+            <span className="text-zinc-500 uppercase tracking-[0.3em] text-xs font-semibold mb-4 block">
+              Visceral Platforms
+            </span>
+            <h1 className="text-6xl md:text-8xl font-bold tracking-tight mb-6">
+              Learn before the <br /> market teaches you.
+            </h1>
+            <p className="text-zinc-400 text-lg md:text-xl max-w-xl mx-auto mb-8 font-light leading-relaxed">
+              Whimsical-grade simulation for serious traders. Build your edge without the financial friction.
+            </p>
+            <button className="bg-white text-black px-8 py-4 rounded-full font-bold flex items-center gap-3 mx-auto hover:bg-zinc-200 transition-colors">
+              Get started free <span className="text-xl">→</span>
+            </button>
+          </motion.div>
+
+          {/* 3. The Dashboard Preview Image */}
+          <motion.div 
+            style={{ y: imageY }}
+            className="relative z-20 w-full max-w-6xl mt-12 px-6"
+          >
+            <div className="rounded-t-2xl border-t border-x border-white/10 bg-zinc-900 shadow-2xl overflow-hidden">
+              {/* Fake Browser UI */}
+              <div className="h-10 bg-zinc-800/50 flex items-center px-4 gap-2 border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                  <div className="w-3 h-3 rounded-full bg-white/10" />
+                </div>
+              </div>
+              {/* Replace with your actual dashboard screenshot */}
+              <div className="bg-zinc-950 aspect-[16/10] flex items-center justify-center">
+                <p className="text-zinc-700 font-mono tracking-tighter italic">[Trading Dashboard Interface]</p>
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </main>
+      </div>
+
+      {/* The "Next Page" Content:
+          This appears as you scroll past the 250vh hero container.
+      */}
+      <section className="relative z-30 bg-black py-32 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-8">
+                Capture and share your <br />
+                <span className="text-purple-400">trading edge.</span>
+              </h2>
+              <p className="text-zinc-400 text-xl leading-relaxed">
+                Our platform isn't just a simulator; it's a journal, a lab, and a proving ground. 
+                Trade global markets with real-time data and zero risk.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-6">
+               <FeatureCard title="Diagrams" desc="Visualize market structures and price action." />
+               <FeatureCard title="Whiteboards" desc="Plan your entries and exits with precision." />
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FeatureCard({ title, desc }) {
+  return (
+    <div className="p-8 bg-zinc-900/50 border border-white/5 rounded-3xl hover:border-white/20 transition-all group">
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 mb-6 group-hover:scale-110 transition-transform" />
+      <h3 className="text-2xl font-bold mb-2">{title}</h3>
+      <p className="text-zinc-500">{desc}</p>
     </div>
   );
 }
