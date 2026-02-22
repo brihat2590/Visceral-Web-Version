@@ -6,6 +6,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
+// import { getOnboardingRedirectPath,getUserOnboardingState } from "@/lib/useNewRedirect";
+
 import { createClient } from "@/lib/supabase/client";
 
 export default  function Login() {
@@ -51,9 +53,32 @@ export default  function Login() {
       description: "Login successful",
     });
 
-    setTimeout(() => {
-      router.replace("/dashboard"); // 👈 change this route if needed
-    }, 600);
+    // try{
+    //   const onboarding=await getUserOnboardingState();
+    //   setLoading(false);
+
+    //   if(!onboarding){
+    //     toast.error("Redirection failed unable to find profile")
+    //     return;
+    //   }
+
+    //   toast.success("Welcome back!")
+
+    //   setTimeout(()=>{
+    //     router.push(getOnboardingRedirectPath(onboarding))
+    //   },800)
+
+
+
+    // }
+    // catch(err){
+    //   console.log(err);
+    //   toast.error("Redirection failed")
+    // }
+    setTimeout(()=>{
+      router.push("/first-entry")
+    })
+   
   };
 
   const handleForgotPassword = async () => {
