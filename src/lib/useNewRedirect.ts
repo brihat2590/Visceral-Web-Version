@@ -62,7 +62,7 @@ export async function getUserOnboardingState(): Promise<UserOnboardingState | nu
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getClaims();
 
   if (!user) return null;
 
