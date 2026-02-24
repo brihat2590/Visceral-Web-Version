@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import Footer from "@/components/Footer";
+import VisceralSidebar from "@/components/VisceralSidebar";
 
 // app/layout.tsx
 
@@ -34,6 +35,7 @@ export default function RootLayout({
         className={` ${geistMono.variable} antialiased`}
       >
         <Toaster/>
+       
         {children}
         <Footer/>
       </body>

@@ -1,5 +1,6 @@
 import { getServerUser } from "@/lib/auth/server";
 import { redirect } from "next/navigation";
+import VisceralSidebar from "@/components/VisceralSidebar";
 
 export default async function Layout({
   children,
@@ -8,10 +9,15 @@ export default async function Layout({
 }) {
   const user = await getServerUser();
 
-
   if (!user) {
     redirect("/login");
   }
 
-  return <div>{children}</div>;
+  // Map your server user data to the format the Sidebar expects
+ 
+  return (
+    <VisceralSidebar >
+      {children}
+    </VisceralSidebar>
+  );
 }

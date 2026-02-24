@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Check } from 'lucide-react'; 
 import { useRouter } from 'next/navigation';
 
+
+
 const ConfirmationModal = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -17,6 +19,7 @@ const ConfirmationModal = () => {
   if (!isOpen) return null;
 
   return (
+    
     <>
       <style>{`
         @keyframes backdropFadeIn {
@@ -135,6 +138,8 @@ const ConfirmationModal = () => {
           animation: textFadeUp 0.6s ease 0.4s both;
         }
       `}</style>
+
+      
 
       <div
         className="backdrop fixed inset-0 z-50 flex items-center justify-center"
