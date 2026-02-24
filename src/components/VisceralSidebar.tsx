@@ -27,7 +27,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/first-entry" },
   { label: "Markets", icon: <TrendingUp size={18} />, href: "/market-screen" },
-  { label: "Almanack", icon: <BookOpen size={18} />, href: "/almanack" },
+  { label: "Almanack", icon: <BookOpen size={18} />, href: "/almanack-archive" },
   { label: "Analytics", icon: <BarChart2 size={18} />, href: "/analytics" },
   { label: "Settings", icon: <Settings size={18} />, href: "/settings" },
 ]

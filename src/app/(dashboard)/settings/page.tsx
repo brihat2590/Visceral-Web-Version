@@ -142,7 +142,7 @@ export default function SettingsPage() {
             <MenuRow 
               icon={<Archive size={18} />} 
               label="Almanack Archive" 
-              onClick={() => router.push("/archive")} 
+              onClick={() => router.push("/almanack-archive")} 
             />
             <MenuRow 
               icon={<Landmark size={18} />} 
