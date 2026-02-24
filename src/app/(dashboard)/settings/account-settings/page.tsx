@@ -58,9 +58,12 @@ export default function SettingsPage() {
   )
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-6">
+    <div className="max-w-5xl mx-auto py-12 px-6">
       <header className="mb-10">
+        <div className="flex items-center gap-3">
+        
         <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Settings</h1>
+        </div>
         <p className="text-white/40 font-normal">Manage your account details and security.</p>
       </header>
 

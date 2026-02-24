@@ -136,7 +136,7 @@ export default function SettingsPage() {
             <MenuRow 
               icon={<History size={18} />} 
               label="Trade History" 
-              onClick={() => router.push("/trade-history")} 
+              onClick={() => router.push("settings/trade-history")} 
             />
             <MenuRow 
               icon={<Archive size={18} />} 
