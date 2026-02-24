@@ -9,7 +9,8 @@ import {
   Settings, 
   LogOut, 
   ChevronRight, 
-  UserPlus 
+  UserPlus,
+  Landmark 
 } from "lucide-react";
 import { toast } from "sonner"; 
 import VisceralLoader from "@/components/Loader";
@@ -142,6 +143,11 @@ export default function SettingsPage() {
               icon={<Archive size={18} />} 
               label="Almanack Archive" 
               onClick={() => router.push("/archive")} 
+            />
+            <MenuRow 
+              icon={<Landmark size={18} />} 
+              label="Financial Guide" 
+              onClick={() => router.push("/settings/financial-guide")} 
             />
             <MenuRow 
               icon={<Settings size={18} />} 
