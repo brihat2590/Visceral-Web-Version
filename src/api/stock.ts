@@ -406,8 +406,8 @@ export function openStockDetailsStream(
   };
 }
 
-export async function searchStock(query: string) {
-  const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`);
+export async function searchStocks(query: string,signal?: AbortSignal) {
+  const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`,{signal});
   if (!res.ok) throw new Error("No ticker found");
   return res.json();
 }

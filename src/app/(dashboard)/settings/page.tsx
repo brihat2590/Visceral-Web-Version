@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner"; 
 import VisceralLoader from "@/components/Loader";
+import Link from "next/link";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://127.0.0.1:8000";
 
@@ -79,9 +80,9 @@ export default function SettingsPage() {
             Decision-making analysis
           </p>
         </div>
-        <button className="bg-neutral-900 border border-neutral-800 px-6 py-2 rounded-lg text-xs font-bold hover:bg-neutral-800 transition-colors">
+        <Link href={"/socials"} className="bg-neutral-900 border border-neutral-800 px-6 py-2 rounded-lg text-xs font-bold hover:bg-neutral-800 transition-colors">
           ADD FRIEND
-        </button>
+        </Link>
       </div>
 
       
