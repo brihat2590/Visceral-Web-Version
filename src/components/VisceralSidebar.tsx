@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client"
 import {
   LayoutDashboard,
@@ -13,6 +15,7 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  Users,
   X,
 } from "lucide-react"
 
@@ -23,12 +26,25 @@ interface NavItem {
   icon: React.ReactNode
   href: string
 }
+const handleSignOut=async()=>{
+  try{
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+    toast.success("Signed out successfully")
+    
+
+  }
+  catch(e){
+    toast.error("Error signing out")
+  }
+}
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/first-entry" },
   { label: "Markets", icon: <TrendingUp size={18} />, href: "/market-screen" },
   { label: "Almanack", icon: <BookOpen size={18} />, href: "/almanack-archive" },
   { label: "Analytics", icon: <BarChart2 size={18} />, href: "/analytics" },
+  { label: "Socials", icon: <Users size={18} />, href: "/socials" },
   { label: "Settings", icon: <Settings size={18} />, href: "/settings" },
 ]
 
@@ -38,7 +54,7 @@ const VLogo = ({ size = 20 }: { size?: number }) => (
   </svg>
 )
 
-export default function VisceralSidebar({ onLogout, children }: { onLogout?: () => void, children?: React.ReactNode }) {
+export default function VisceralSidebar({ children }: {  children?: React.ReactNode }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -85,7 +101,7 @@ export default function VisceralSidebar({ onLogout, children }: { onLogout?: () 
           
           {/* Header Area */}
           <div className={`flex items-center ${collapsed ? "justify-center" : "px-5"} pt-7 pb-6 h-[80px]`}>
-            <VLogo size={22} />
+            <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-6" />
             <span className="vs-content-fade ml-3 text-lg font-bold tracking-tight">
               Visceral
             </span>
@@ -127,7 +143,7 @@ export default function VisceralSidebar({ onLogout, children }: { onLogout?: () 
             )}
             
             <button 
-              onClick={onLogout}
+              onClick={handleSignOut}
               className={`w-full flex items-center ${collapsed ? "justify-center" : "px-2"} py-2.5 text-white/40 hover:text-red-400 transition-colors`}
             >
               <LogOut size={18} />
@@ -148,7 +164,7 @@ export default function VisceralSidebar({ onLogout, children }: { onLogout?: () 
         <div className="flex-1 flex flex-col min-w-0">
           <header className="md:hidden flex items-center justify-between px-4 h-16 border-b border-white/[0.08]">
             <button onClick={() => setMobileOpen(true)}><Menu size={24} /></button>
-            <VLogo size={20} />
+            {/* <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-10" /> */}
             <div className="w-6" /> {/* Spacer */}
           </header>
           
@@ -164,7 +180,7 @@ export default function VisceralSidebar({ onLogout, children }: { onLogout?: () 
             <div className="fixed left-0 top-0 h-full w-[280px] bg-black border-r border-white/[0.1] z-50 p-6 flex flex-col">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <VLogo size={22} />
+                  <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-6" />
                   <span className="text-xl font-bold">Visceral</span>
                 </div>
                 <button onClick={() => setMobileOpen(false)}><X size={20} /></button>
