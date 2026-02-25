@@ -7,7 +7,7 @@ export default async function Layout({children}:{
 }){
     const user=await getServerUser();
     if(user){
-        redirect("/dashboard");
+        redirect("/first-entry");
     }
 
     return(

@@ -417,11 +417,11 @@ function ReflectVisual() {
   const [line, setLine] = useState(0);
 
   const lines = [
-    { text: "› Analyzing TSLA trade #47...", dim: true },
-    { text: "  Entry at $248.30 — 3 candles late.", dim: false },
-    { text: "  FOMO bias detected. +0.8σ urgency.", dim: false },
-    { text: "  Stop placement: -2.1% (acceptable).", dim: false },
-    { text: "  Grade: B+ — solid but emotional.", dim: false, highlight: true },
+    {
+      text: "The AI reviews every trade you make, analyzing decision quality, risk discipline, and behavioral patterns. It highlights emotional bias, missed structure, and execution flaws—then delivers clear, actionable guidance to help you trade with consistency, control, and conviction.",
+      dim: false,
+      highlight: true,
+    },
   ];
 
   useEffect(() => {
@@ -450,24 +450,31 @@ function ReflectVisual() {
             <span className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse" />
           </span>
         </div>
-        <div className="p-4 min-h-[110px] space-y-1.5">
-          {lines.slice(0, line).map((l, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={cn(
-                "leading-relaxed",
-                l.dim ? "text-white/25" : l.highlight ? "text-white font-black tracking-wide" : "text-white/55"
-              )}
-            >
-              {l.text}
-            </motion.div>
-          ))}
-          {line < lines.length && (
-            <span className="inline-block w-1.5 h-3 bg-white/50 animate-pulse" />
-          )}
-        </div>
+        <div className="p-4 min-h-[110px]">
+  {lines.slice(0, line).map((l, i) => (
+    <motion.div
+      key={i}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={cn(
+        "leading-relaxed text-sm",
+        l.highlight
+          ? "text-white font-medium"
+          : l.dim
+          ? "text-white/30"
+          : "text-white/60"
+      )}
+    >
+      {l.text}
+    </motion.div>
+  ))}
+
+  {/* Subtle cursor pulse (kept, but visually appropriate for paragraph) */}
+  {line < lines.length && (
+    <span className="inline-block mt-2 w-2 h-2 rounded-full bg-white/40 animate-pulse" />
+  )}
+</div>
       </div>
 
       {/* Grade bars */}
