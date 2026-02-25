@@ -59,9 +59,23 @@ export function HowItWorksSection() {
 
       {/* Header */}
       <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 mb-14 text-center">
-        <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-mono mb-4">
+        {/* <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-mono mb-4">
           The Process
-        </p>
+        </p> */}
+
+<div className="flex flex-col items-center gap-1 group cursor-default">
+  {/* The Text: High tracking, bold, and italic for that aggressive look */}
+  <div className="text-[11px] font-black italic tracking-[1.2em] text-white uppercase ml-[1.2em]">
+    The Process
+  </div>
+  
+  {/* The Accent: A sharp red bar that matches your brand image */}
+  <div className="relative">
+    <div className="h-[2px] w-8 bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] transition-all duration-500 group-hover:w-12" />
+    {/* Subtle glow layer */}
+    <div className="absolute inset-0 bg-red-600 blur-[4px] opacity-40" />
+  </div>
+</div>
         <h2
           className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-none"
         //   style={{ fontFamily: "'Bebas Neue', 'Arial Black', sans-serif" }}

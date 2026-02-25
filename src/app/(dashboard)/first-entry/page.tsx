@@ -69,7 +69,7 @@ export default function HomeScreen() {
 
   return (
     <div className="min-h-screen bg-black text-white px-5 pt-10 pb-20 max-w-2xl md:max-w-4xl mx-auto">
-      {/* Balance Card Section */}
+      {/* Balance Card Section */}  
       <BalanceCard data={data} />
 
       {/* Almanack Analysis Section */}
@@ -172,7 +172,7 @@ function AlmanackSection({
             <p className="text-neutral-300 text-sm leading-6 line-clamp-3 font-light">
               {analysis}
             </p>
-            <p className="text-neutral-500 text-xs group-hover:text-emerald-400 transition-colors flex items-center gap-1">
+            <p className="text-neutral-500 text-xs group-hover:text-neutral-300 transition-colors flex items-center gap-1">
               Tap to expand →
             </p>
           </div>

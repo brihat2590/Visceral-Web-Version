@@ -21,7 +21,11 @@ export function VisceralFeaturesSection() {
             </h2>
 
             <p className="text-white/50 text-base leading-relaxed max-w-sm mb-8">
-              Real traders are forged through repetition and reflection — not theory.
+              <span className="">Real traders
+                
+
+
+                </span> are forged through repetition and reflection — not theory.
               Visceral gives you the arena to do both, risk-free.
             </p>
 

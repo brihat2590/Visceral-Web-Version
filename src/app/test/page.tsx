@@ -7,17 +7,16 @@ export default function Test() {
   return (
     <div className="relative w-full min-h-screen bg-black overflow-hidden">
       
-      {/* Container to handle the centering and scaling */}
+      {/* Background Video Wrapper - Now Responsive */}
       <div 
-        className="absolute left-1/2 -translate-x-1/2"
+        className="absolute left-1/2 -translate-x-1/2 w-[140vw] lg:w-[110vw]" 
         style={{ 
-          top: '120px', 
-          width: '1000px', // Slightly wider than video for the glow
-          height: '600px',
-          zIndex: 0 
+          top: '-10%', // Pulled up to sit behind Hero text
+          height: '100vh',
+          zIndex: 0,
+          pointerEvents: 'none' // Ensures video doesn't block clicks
         }}
       >
-        {/* The Video with Masking */}
         <video
           autoPlay
           loop
@@ -25,18 +24,21 @@ export default function Test() {
           playsInline
           className="w-full h-full object-cover"
           style={{
-            opacity: 0.8,
-            /* This mask creates the seamless blend */
-            WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%)',
-            maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%)',
+            opacity: 0.6, // Slightly lowered for better text readability
+            /* Updated Mask: 
+               Stretched the circle into an ellipse to cover more horizontal width 
+            */
+            WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
+            maskImage: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
           }}
         >
+          {/* Note: Ensure this URL leads to a direct .mp4 file */}
           <source src="https://www.pexels.com/download/video/9694807/" type="video/mp4" />
         </video>
 
-        {/* Dynamic Glow: Using a colored or neutral blur behind the video */}
+        {/* Enhanced Dynamic Glow */}
         <div
-          className="absolute inset-0 -z-10 bg-neutral-800/30 rounded-full blur-[120px]"
+          className="absolute inset-x-0 top-1/4 bottom-1/4 -z-10 bg-zinc-800/20 blur-[160px] rounded-full"
           aria-hidden="true"
         />
       </div>
@@ -46,7 +48,6 @@ export default function Test() {
         <HeroContent />
         <HowItWorksSection/>
         <VisceralFeaturesSection/>
-        
       </div>
     </div>
   );
