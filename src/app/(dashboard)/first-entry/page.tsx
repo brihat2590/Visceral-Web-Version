@@ -9,6 +9,7 @@ import { getWatchList } from "@/api/watchlist";
 import { useAuth } from "@/hooks/useAuth";
 import { getDisplaySymbol } from "@/lib/displaySymbol";
 import { formatPrice } from "@/lib/formatPrice";
+import VisceralLoader from "@/components/Loader";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://127.0.0.1:8000";
 
@@ -62,7 +63,14 @@ export default function HomeScreen() {
   if (authloading || loading || !data) {
     return (
       <div className="flex min-h-screen bg-black items-center justify-center">
-        <Loader2 className="w-8 h-8 text-white animate-spin opacity-50" />
+        {/* <Loader2 className="w-8 h-8 text-white animate-spin opacity-50" /> */}
+
+        <div className="flex-col">
+        <VisceralLoader/>
+        <div>
+          Loading please wait
+        </div>
+        </div>
       </div>
     );
   }
@@ -202,7 +210,10 @@ function WatchlistSection({
 
       {loading ? (
         <div className="flex py-4 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin text-neutral-600" />
+          <VisceralLoader/>
+          <div>
+            Opening Dashboard
+          </div>
         </div>
       ) : (
         <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide -mx-5 px-5">
