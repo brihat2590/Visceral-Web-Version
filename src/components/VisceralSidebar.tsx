@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { usePathname, useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import {
   LayoutDashboard,
@@ -17,62 +16,47 @@ import {
   Menu,
   Users,
   X,
-  UserRoundIcon,
 } from "lucide-react"
 
-const supabase = createClient();
+const supabase = createClient()
 
 interface NavItem {
   label: string
   icon: React.ReactNode
   href: string
 }
-const handleSignOut=async()=>{
-  try{
-    const router=useRouter()
-    const { error } = await supabase.auth.signOut()
-    
-    toast.success("Signed out successfully")
-    router.push("/login")
-    
-
-  }
-  catch(e){
-    toast.error("Error signing out")
-  }
-}
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/first-entry" },
-  { label: "Markets", icon: <TrendingUp size={18} />, href: "/market-screen" },
-  { label: "Almanack", icon: <BookOpen size={18} />, href: "/almanack-archive" },
-  { label: "Leagues", icon: <BarChart2 size={18} />, href: "/leagues" },
-  { label: "Socials", icon: <Users size={18} />, href: "/socials" },
-  { label: "Settings", icon: <Settings size={18} />, href: "/settings" },
+  { label: "Markets",   icon: <TrendingUp size={18} />,     href: "/market-screen" },
+  { label: "Almanack",  icon: <BookOpen size={18} />,       href: "/almanack-archive" },
+  { label: "Leagues",   icon: <BarChart2 size={18} />,      href: "/leagues" },
+  { label: "Socials",   icon: <Users size={18} />,          href: "/socials" },
+  { label: "Settings",  icon: <Settings size={18} />,       href: "/settings" },
 ]
 
-const VLogo = ({ size = 20 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 4 12 20 20 4" />
-  </svg>
-)
+export default function VisceralSidebar({ children }: { children?: React.ReactNode }) {
+  const pathname  = usePathname()
+  const router    = useRouter() // ✅ Moved inside the component
 
-export default function VisceralSidebar({ children }: {  children?: React.ReactNode }) {
-  const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [collapsed,   setCollapsed]   = useState(false)
+  const [mobileOpen,  setMobileOpen]  = useState(false)
+  const [userData,    setUserData]    = useState<any>(null)
+  const [loading,     setLoading]     = useState(true)
+  const [signingOut,  setSigningOut]  = useState(false)
 
+  // ✅ Replaced getUser() with getSession() — no LockManager issues
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user ?? null
+
       if (user) {
-        const username = user.user_metadata?.username || user.email?.split('@')[0]
+        const username = user.user_metadata?.username || user.email?.split("@")[0]
         setUserData({
-          name: username,
-          email: user.email,
-          initials: username?.slice(0, 2).toUpperCase()
+          name:     username,
+          email:    user.email,
+          initials: username?.slice(0, 2).toUpperCase(),
         })
       }
       setLoading(false)
@@ -80,7 +64,44 @@ export default function VisceralSidebar({ children }: {  children?: React.ReactN
     fetchUser()
   }, [])
 
+  // ✅ Moved inside component — useRouter() is now accessible
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try {
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        // ✅ Actually check the error from signOut
+        throw error
+      }
+
+      toast.success("Signed out successfully")
+      router.push("/login")
+    } catch (e) {
+      toast.error("Error signing out", {
+        description: "Please try again.",
+      })
+      console.error("Sign out error:", e)
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
   const sidebarWidth = collapsed ? "70px" : "240px"
+
+  // Reusable sign-out button for both desktop + mobile
+  const SignOutButton = ({ className = "" }: { className?: string }) => (
+    <button
+      onClick={handleSignOut}
+      disabled={signingOut}
+      className={`flex items-center py-2.5 text-white/40 hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    >
+      <LogOut size={18} className={signingOut ? "animate-spin" : ""} />
+      <span className="ml-3 text-[14px] font-normal">
+        {signingOut ? "Signing out…" : "Logout"}
+      </span>
+    </button>
+  )
 
   return (
     <>
@@ -100,11 +121,13 @@ export default function VisceralSidebar({ children }: {  children?: React.ReactN
       `}</style>
 
       <div className="flex h-screen w-full bg-black text-white overflow-hidden font-sans">
+
+        {/* ── Desktop Sidebar ── */}
         <aside className="vs-sidebar hidden md:flex relative bg-black border-r border-white/[0.08] flex-col z-30">
-          
-          {/* Header Area */}
+
+          {/* Header */}
           <div className={`flex items-center ${collapsed ? "justify-center" : "px-5"} pt-7 pb-6 h-[80px]`}>
-            <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-6" />
+            <img src="/visceral_logo.jpg" alt="Visceral Logo" className="h-6" />
             <span className="vs-content-fade ml-3 text-lg font-bold tracking-tight">
               Visceral
             </span>
@@ -119,7 +142,9 @@ export default function VisceralSidebar({ children }: {  children?: React.ReactN
                   key={item.href}
                   href={item.href}
                   className={`flex items-center ${collapsed ? "justify-center" : "px-3"} py-2.5 rounded-lg transition-all ${
-                    isActive ? "bg-white text-black" : "text-white/50 hover:bg-white/5 hover:text-white"
+                    isActive
+                      ? "bg-white text-black"
+                      : "text-white/50 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
@@ -144,17 +169,21 @@ export default function VisceralSidebar({ children }: {  children?: React.ReactN
                 </div>
               </div>
             )}
-            
-            <button 
+
+            {/* ✅ Sign out button now works — handleSignOut has router access */}
+            <button
               onClick={handleSignOut}
-              className={`w-full flex items-center ${collapsed ? "justify-center" : "px-2"} py-2.5 text-white/40 hover:text-red-400 transition-colors`}
+              disabled={signingOut}
+              className={`w-full flex items-center ${collapsed ? "justify-center" : "px-2"} py-2.5 text-white/40 hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <LogOut size={18} />
-              <span className="vs-content-fade ml-3 text-[14px] font-normal">Logout</span>
+              <LogOut size={18} className={signingOut ? "animate-spin" : ""} />
+              <span className="vs-content-fade ml-3 text-[14px] font-normal">
+                {signingOut ? "Signing out…" : "Logout"}
+              </span>
             </button>
           </div>
 
-          {/* Collapse Toggle Button */}
+          {/* Collapse Toggle */}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="absolute -right-3 top-10 w-6 h-6 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
@@ -163,44 +192,78 @@ export default function VisceralSidebar({ children }: {  children?: React.ReactN
           </button>
         </aside>
 
-        {/* Main Viewport */}
+        {/* ── Main Viewport ── */}
         <div className="flex-1 flex flex-col min-w-0">
           <header className="md:hidden flex items-center justify-between px-4 h-16 border-b border-white/[0.08]">
-            <button onClick={() => setMobileOpen(true)}><Menu size={24} /></button>
-            {/* <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-10" /> */}
-            <div className="w-6" /> {/* Spacer */}
+            <button onClick={() => setMobileOpen(true)}>
+              <Menu size={24} />
+            </button>
+            <div className="w-6" />
           </header>
-          
+
           <main className="flex-1 overflow-y-auto">
             {children}
           </main>
         </div>
 
-        {/* Mobile Sidebar */}
+        {/* ── Mobile Sidebar ── */}
         {mobileOpen && (
           <>
-            <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-40" onClick={() => setMobileOpen(false)} />
+            <div
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm z-40"
+              onClick={() => setMobileOpen(false)}
+            />
             <div className="fixed left-0 top-0 h-full w-[280px] bg-black border-r border-white/[0.1] z-50 p-6 flex flex-col">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-6" />
+                  <img src="/visceral_logo.jpg" alt="Visceral Logo" className="h-6" />
                   <span className="text-xl font-bold">Visceral</span>
                 </div>
-                <button onClick={() => setMobileOpen(false)}><X size={20} /></button>
+                <button onClick={() => setMobileOpen(false)}>
+                  <X size={20} />
+                </button>
               </div>
+
               <nav className="flex-1 space-y-2">
                 {NAV_ITEMS.map((item) => (
-                  <Link 
-                    key={item.href} 
-                    href={item.href} 
+                  <Link
+                    key={item.href}
+                    href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-4 px-4 py-3 rounded-xl ${pathname === item.href ? "bg-white text-black" : "text-white/50"}`}
+                    className={`flex items-center gap-4 px-4 py-3 rounded-xl ${
+                      pathname === item.href ? "bg-white text-black" : "text-white/50"
+                    }`}
                   >
-                    {item.icon} <span className="text-[15px]">{item.label}</span>
+                    {item.icon}
+                    <span className="text-[15px]">{item.label}</span>
                   </Link>
                 ))}
               </nav>
-              {/* Mobile Footer logic here... */}
+
+              {/* ✅ Mobile sign out button — also fixed */}
+              <div className="border-t border-white/[0.08] pt-4 mt-4">
+                {!loading && userData && (
+                  <div className="flex items-center gap-3 px-4 py-3 mb-2">
+                    <div className="w-8 h-8 rounded-md bg-white text-black flex items-center justify-center flex-shrink-0 font-bold text-xs">
+                      {userData.initials}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[13px] font-medium truncate text-white">{userData.name}</span>
+                      <span className="text-[11px] truncate text-white/40">{userData.email}</span>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="w-full flex items-center gap-4 px-4 py-3 text-white/40 hover:text-red-400 transition-colors disabled:opacity-50"
+                >
+                  <LogOut size={18} className={signingOut ? "animate-spin" : ""} />
+                  <span className="text-[15px]">
+                    {signingOut ? "Signing out…" : "Logout"}
+                  </span>
+                </button>
+              </div>
             </div>
           </>
         )}
