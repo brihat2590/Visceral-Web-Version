@@ -67,9 +67,7 @@ export default function HomeScreen() {
 
         <div className="flex-col">
         <VisceralLoader/>
-        <div>
-          Loading please wait
-        </div>
+        
         </div>
       </div>
     );
