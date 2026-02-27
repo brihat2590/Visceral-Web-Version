@@ -17,6 +17,7 @@ import {
   Menu,
   Users,
   X,
+  UserRoundIcon,
 } from "lucide-react"
 
 const supabase = createClient();
@@ -28,9 +29,11 @@ interface NavItem {
 }
 const handleSignOut=async()=>{
   try{
+    const router=useRouter()
     const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    
     toast.success("Signed out successfully")
+    router.push("/login")
     
 
   }

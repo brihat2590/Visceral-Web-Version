@@ -39,7 +39,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   return (
     <Link
-      href={`/social/posts/${post.id}`}
+      href={`/socials/posts/${post.id}`}
       className="group block w-full border border-zinc-900 bg-black hover:border-zinc-600 transition-all duration-500"
     >
       {/* Top bar */}
