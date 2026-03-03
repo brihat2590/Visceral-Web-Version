@@ -22,7 +22,7 @@ export default function Footer() {
       <div className="relative z-10 flex flex-col md:flex-row  md:items-start justify-between px-14 pt-12 pb-10 gap-10 md:gap-10">
         {/* Logo */}
         <div className="text-white text-xl font-black tracking-tight">
-          <img src={"./visceral_logo.jpg"} alt="Visceral Logo" className="h-10 w-auto" />
+          <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-10 w-auto" />
         </div>
 
         {/* Nav Links */}
