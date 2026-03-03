@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Post, ByUsComment } from "@/types/social";
+import { Post } from "@/types/social";
 import {
   Terminal, ArrowUpRight, MessageSquare,
   Send, Loader2, ChevronDown, ChevronUp, User,
@@ -34,19 +34,13 @@ function getFallback(id: string): string {
   return FALLBACK_IMAGES[index];
 }
 
-function emailToName(email: string | null | undefined): string {
-  if (!email) return "Anonymous";
-  return email.split("@")[0].replace(/[._]/g, " ");
-}
-
-// "comments" table shape (by_you)
-interface PostComment {
+interface EnrichedComment {
   id: string;
-  post_id: string;
   user_id?: string | null;
-  commenter_email?: string | null;
   comment: string;
   created_at: string;
+  username?: string | null;
+  commenter_email?: string | null;
 }
 
 interface PostCardProps {
@@ -54,30 +48,29 @@ interface PostCardProps {
   variant?: "by_us" | "by_you";
 }
 
-// ── Guard wrapper ─────────────────────────────────────────────────────────────
 export default function PostCard({ post, variant = "by_us" }: PostCardProps) {
   if (!post || !post.id) return null;
   return <PostCardInner post={post} variant={variant} />;
 }
 
-// ── Main card ─────────────────────────────────────────────────────────────────
 function PostCardInner({ post, variant }: Required<PostCardProps>) {
   const { user } = useAuth();
   const fallback = getFallback(post.id);
   const [imgSrc, setImgSrc] = useState<string>(post.image_url ?? fallback);
 
-  // ── by_us comment state ───────────────────────────────────────────────────
+  // Store the logged-in user's public profile data
+  const [currentUserProfile, setCurrentUserProfile] = useState<{username: string | null} | null>(null);
+
   const [showByUsComments, setShowByUsComments] = useState(false);
-  const [byUsComments, setByUsComments] = useState<ByUsComment[]>([]);
+  const [byUsComments, setByUsComments] = useState<EnrichedComment[]>([]);
   const [byUsCommentCount, setByUsCommentCount] = useState(0);
   const [loadingByUsComments, setLoadingByUsComments] = useState(false);
   const [byUsCommentText, setByUsCommentText] = useState("");
   const [submittingByUs, setSubmittingByUs] = useState(false);
   const byUsInputRef = useRef<HTMLInputElement>(null);
 
-  // ── by_you comment state ──────────────────────────────────────────────────
   const [showByYouComments, setShowByYouComments] = useState(false);
-  const [byYouComments, setByYouComments] = useState<PostComment[]>([]);
+  const [byYouComments, setByYouComments] = useState<EnrichedComment[]>([]);
   const [byYouCommentCount, setByYouCommentCount] = useState(0);
   const [loadingByYouComments, setLoadingByYouComments] = useState(false);
   const [byYouCommentText, setByYouCommentText] = useState("");
@@ -86,94 +79,150 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
 
   const readingTime = Math.max(1, Math.ceil(post.post.split(" ").length / 200));
 
-  // ── Fetch by_us comment count on mount ────────────────────────────────────
+  // 1. Fetch the current user's profile from the 'users' table on mount
   useEffect(() => {
-    if (variant !== "by_us") return;
+    if (!user) return;
+    async function fetchProfile() {
+      const { data } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", user?.id)
+        .single();
+      if (data) setCurrentUserProfile(data);
+    }
+    fetchProfile();
+  }, [user]);
+
+  function resolveDisplayName(c: EnrichedComment): string {
+    if (c.username && c.username.trim()) return c.username.trim();
+    if (c.commenter_email) {
+      return c.commenter_email.split("@")[0].replace(/[._]/g, " ");
+    }
+    return "Member";
+  }
+
+  async function enrichWithUsernames(
+    comments: { id: string; user_id?: string | null; comment: string; created_at: string }[]
+  ): Promise<EnrichedComment[]> {
+    const userIds = Array.from(
+      new Set(comments.map((c) => c.user_id).filter(Boolean) as string[])
+    );
+  
+    // 👇 LOG 1 — Are user_ids being extracted from comments?
+    console.log("[DEBUG] userIds extracted:", userIds);
+  
+    let usernameByUserId: Record<string, { username: string | null; email: string | null }> = {};
+  
+    if (userIds.length > 0) {
+      const { data: userRows, error } = await supabase
+        .from("users")
+        .select("id, username, email")
+        .in("id", userIds);
+  
+      // 👇 LOG 2 — What did Supabase return for those user IDs?
+      console.log("[DEBUG] userRows from supabase:", userRows);
+      console.log("[DEBUG] error:", error);
+  
+      if (userRows) {
+        for (const row of userRows) {
+          usernameByUserId[row.id] = {
+            username: row.username ?? null,
+            email: row.email ?? null,
+          };
+        }
+      }
+    }
+  
+    const enriched = comments.map((c) => {
+      const resolved = c.user_id ? usernameByUserId[c.user_id] : null;
+      return {
+        ...c,
+        username: resolved?.username ?? null,
+        commenter_email: resolved?.email ?? null,
+      };
+    });
+  
+    // 👇 LOG 3 — Final enriched comments — do they have usernames?
+    console.log("[DEBUG] enriched comments:", enriched);
+  
+    return enriched;
+  }
+
+  useEffect(() => {
+    const table = variant === "by_us" ? "by_us_comments" : "comments";
+    const filterCol = variant === "by_us" ? "by_us_id" : "post_id";
+    
     supabase
-      .from("by_us_comments")
+      .from(table)
       .select("id", { count: "exact", head: true })
-      .eq("by_us_id", post.id)
-      .then(({ count }) => setByUsCommentCount(count ?? 0));
+      .eq(filterCol, post.id)
+      .then(({ count }) => {
+        if (variant === "by_us") setByUsCommentCount(count ?? 0);
+        else setByYouCommentCount(count ?? 0);
+      });
   }, [post.id, variant]);
 
-  // ── Fetch by_us comments when panel opens ────────────────────────────────
   useEffect(() => {
     if (!showByUsComments || variant !== "by_us") return;
-    async function fetch() {
+    async function load() {
       setLoadingByUsComments(true);
       const { data, error } = await supabase
         .from("by_us_comments")
         .select("id, by_us_id, comment, created_at, user_id")
         .eq("by_us_id", post.id)
         .order("created_at", { ascending: true });
+
       if (!error && data) {
-        setByUsComments(
-          data.map((c) => ({
-            ...c,
-            commenter_email:
-              user?.id && c.user_id === user.id ? user.email ?? null : null,
-          }))
-        );
-        setByUsCommentCount(data.length);
+        const enriched = await enrichWithUsernames(data);
+        setByUsComments(enriched);
       }
       setLoadingByUsComments(false);
     }
-    fetch();
-  }, [showByUsComments, post.id, variant, user]);
+    load();
+  }, [showByUsComments, post.id, variant]);
 
-  // ── Fetch by_you comment count on mount ──────────────────────────────────
-  useEffect(() => {
-    if (variant !== "by_you") return;
-    supabase
-      .from("comments")
-      .select("id", { count: "exact", head: true })
-      .eq("post_id", post.id)
-      .then(({ count }) => setByYouCommentCount(count ?? 0));
-  }, [post.id, variant]);
-
-  // ── Fetch by_you comments when panel opens ───────────────────────────────
   useEffect(() => {
     if (!showByYouComments || variant !== "by_you") return;
-    async function fetch() {
+    async function load() {
       setLoadingByYouComments(true);
       const { data, error } = await supabase
         .from("comments")
         .select("id, post_id, comment, created_at, user_id")
         .eq("post_id", post.id)
         .order("created_at", { ascending: true });
+
       if (!error && data) {
-        setByYouComments(
-          data.map((c) => ({
-            ...c,
-            commenter_email:
-              user?.id && c.user_id === user.id ? user.email ?? null : null,
-          }))
-        );
-        setByYouCommentCount(data.length);
+        const enriched = await enrichWithUsernames(data);
+        setByYouComments(enriched);
       }
       setLoadingByYouComments(false);
     }
-    fetch();
-  }, [showByYouComments, post.id, variant, user]);
+    load();
+  }, [showByYouComments, post.id, variant]);
 
-  // ── Submit by_us comment ──────────────────────────────────────────────────
   async function submitByUsComment(e: React.FormEvent) {
     e.preventDefault();
     const text = byUsCommentText.trim();
     if (!text || !user) return;
     setSubmittingByUs(true);
+    
     const { data, error } = await supabase
       .from("by_us_comments")
       .insert([{ by_us_id: post.id, comment: text, user_id: user.id }])
       .select("id, by_us_id, comment, created_at, user_id")
       .single();
+
     if (error) {
       toast.error("Failed to post comment.");
     } else {
-      setByUsComments((prev) => [
-        ...prev,
-        { ...data, commenter_email: user.email ?? null },
-      ]);
+      // ✅ Fix: Use fetched currentUserProfile username
+      const newComment: EnrichedComment = {
+        ...data,
+        username: currentUserProfile?.username || null,
+        commenter_email: user.email || null,
+      };
+      
+      setByUsComments((prev) => [...prev, newComment]);
       setByUsCommentCount((c) => c + 1);
       setByUsCommentText("");
       toast.success("Comment posted.");
@@ -181,24 +230,28 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
     setSubmittingByUs(false);
   }
 
-  // ── Submit by_you comment ─────────────────────────────────────────────────
   async function submitByYouComment(e: React.FormEvent) {
     e.preventDefault();
     const text = byYouCommentText.trim();
     if (!text || !user) return;
     setSubmittingByYou(true);
+
     const { data, error } = await supabase
       .from("comments")
       .insert([{ post_id: post.id, comment: text, user_id: user.id }])
       .select("id, post_id, comment, created_at, user_id")
       .single();
+
     if (error) {
       toast.error("Failed to post comment.");
     } else {
-      setByYouComments((prev) => [
-        ...prev,
-        { ...data, commenter_email: user.email ?? null },
-      ]);
+      // ✅ Fix: Use fetched currentUserProfile username
+      const newComment: EnrichedComment = {
+        ...data,
+        username: currentUserProfile?.username || null,
+        commenter_email: user.email || null,
+      };
+      setByYouComments((prev) => [...prev, newComment]);
       setByYouCommentCount((c) => c + 1);
       setByYouCommentText("");
       toast.success("Comment posted.");
@@ -220,14 +273,7 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
     if (!showByYouComments) setTimeout(() => byYouInputRef.current?.focus(), 120);
   }
 
-  // ── Shared comment list renderer ──────────────────────────────────────────
-  function CommentList({
-    comments,
-    loading,
-  }: {
-    comments: (ByUsComment | PostComment)[];
-    loading: boolean;
-  }) {
+  function CommentList({ comments, loading }: { comments: EnrichedComment[]; loading: boolean }) {
     if (loading)
       return (
         <div className="flex justify-center py-4">
@@ -237,18 +283,14 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
     if (comments.length === 0)
       return (
         <p className="text-[10px] text-zinc-700 uppercase tracking-widest text-center py-3">
-          No comments yet — be the first.
+          No comments yet.
         </p>
       );
     return (
       <ul className="flex flex-col gap-4 max-h-72 overflow-y-auto pr-1">
         {comments.map((c) => {
           const isMe = user?.id && c.user_id === user.id;
-          const displayName = c.commenter_email
-            ? emailToName(c.commenter_email)
-            : c.user_id
-            ? "Member"
-            : "Anonymous";
+          const displayName = isMe ? "You" : resolveDisplayName(c);
           return (
             <li key={c.id} className="flex flex-col gap-1.5 border-l-2 border-zinc-800 pl-3">
               <div className="flex items-center gap-2">
@@ -256,13 +298,12 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
                   <User size={10} className="text-zinc-500" />
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                  {isMe ? "You" : displayName}
+                  {displayName}
                 </span>
                 <span className="text-[9px] text-zinc-700 font-black uppercase tracking-widest ml-auto">
                   {new Date(c.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
-                    year: "numeric",
                   })}
                 </span>
               </div>
@@ -276,9 +317,7 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
 
   return (
     <div className="group w-full border border-zinc-900 bg-black hover:border-zinc-600 transition-all duration-500">
-      {/* ── Clickable card link ──────────────────────────────────────────── */}
       <Link href={`/socials/posts/${post.id}`} className="block">
-        {/* Top bar */}
         <div className="flex items-center justify-between px-5 py-2 border-b border-zinc-900 bg-zinc-950">
           <div className="flex items-center gap-2 text-zinc-600">
             <Terminal size={11} />
@@ -288,18 +327,11 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
           </div>
           <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.25em] text-zinc-700">
             <span>{readingTime} min read</span>
-            <span>
-              {new Date(post.created_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
+            <span>{new Date(post.created_at).toLocaleDateString()}</span>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row">
-          {/* Image */}
           <div className="relative w-full md:w-[280px] md:min-w-[280px] min-h-[220px] overflow-hidden border-b md:border-b-0 md:border-r border-zinc-900 grayscale group-hover:grayscale-0 transition-all duration-700 shrink-0">
             <Image
               src={imgSrc}
@@ -308,52 +340,38 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
               className="object-cover opacity-50 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
               onError={() => setImgSrc(fallback)}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/60 md:block hidden" />
           </div>
 
-          {/* Body */}
           <div className="flex flex-col justify-between flex-1 p-7 gap-6">
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-4">
                 <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-tight group-hover:text-zinc-200 transition-colors">
                   {post.title}
                 </h2>
-                <ArrowUpRight
-                  size={20}
-                  className="text-zinc-700 group-hover:text-white transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 shrink-0 mt-1"
-                />
+                <ArrowUpRight size={20} className="text-zinc-700 group-hover:text-white transition-all shrink-0 mt-1" />
               </div>
-              <p className="text-zinc-500 text-sm leading-relaxed line-clamp-3 group-hover:text-zinc-400 transition-colors">
+              <p className="text-zinc-500 text-sm leading-relaxed line-clamp-3">
                 {post.post}
               </p>
             </div>
 
             <div className="w-full border-t border-zinc-900" />
 
-            {/* ── Interaction bar ────────────────────────────────────────── */}
             <div className="flex items-center gap-4" onClick={(e) => e.preventDefault()}>
               {variant === "by_us" ? (
-                // by_us: comment toggle only
-                <button
-                  onClick={toggleByUsComments}
-                  className="flex items-center gap-2 text-zinc-600 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors"
-                >
+                <button onClick={toggleByUsComments} className="flex items-center gap-2 text-zinc-600 hover:text-white text-[10px] font-black uppercase tracking-widest">
                   <MessageSquare size={13} />
                   <span>{byUsCommentCount} {byUsCommentCount === 1 ? "comment" : "comments"}</span>
-                  {showByUsComments ? <ChevronUp size={12} className="ml-1" /> : <ChevronDown size={12} className="ml-1" />}
+                  {showByUsComments ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 </button>
               ) : (
-                // by_you: votes + bookmark + comment toggle
                 <>
                   <VoteButtons post={post} />
                   <BookmarkButton postId={post.id} />
-                  <button
-                    onClick={toggleByYouComments}
-                    className="flex items-center gap-2 text-zinc-600 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors ml-auto"
-                  >
+                  <button onClick={toggleByYouComments} className="flex items-center gap-2 text-zinc-600 hover:text-white text-[10px] font-black uppercase tracking-widest ml-auto">
                     <MessageSquare size={13} />
                     <span>{byYouCommentCount} {byYouCommentCount === 1 ? "comment" : "comments"}</span>
-                    {showByYouComments ? <ChevronUp size={12} className="ml-1" /> : <ChevronDown size={12} className="ml-1" />}
+                    {showByYouComments ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                   </button>
                 </>
               )}
@@ -362,60 +380,31 @@ function PostCardInner({ post, variant }: Required<PostCardProps>) {
         </div>
       </Link>
 
-      {/* ── by_us comment panel ───────────────────────────────────────────── */}
-      {variant === "by_us" && showByUsComments && (
-        <div
-          className="border-t border-zinc-900 bg-zinc-950 px-6 py-5 flex flex-col gap-4"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <CommentList comments={byUsComments} loading={loadingByUsComments} />
-          <form onSubmit={submitByUsComment} className="flex items-center gap-3 border-t border-zinc-900 pt-4">
+      {(showByUsComments || showByYouComments) && (
+        <div className="border-t border-zinc-900 bg-zinc-950 px-6 py-5 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+          <CommentList 
+            comments={variant === "by_us" ? byUsComments : byYouComments} 
+            loading={variant === "by_us" ? loadingByUsComments : loadingByYouComments} 
+          />
+          <form 
+            onSubmit={variant === "by_us" ? submitByUsComment : submitByYouComment} 
+            className="flex items-center gap-3 border-t border-zinc-900 pt-4"
+          >
             <input
-              ref={byUsInputRef}
+              ref={variant === "by_us" ? byUsInputRef : byYouInputRef}
               type="text"
-              value={byUsCommentText}
-              onChange={(e) => setByUsCommentText(e.target.value)}
+              value={variant === "by_us" ? byUsCommentText : byYouCommentText}
+              onChange={(e) => variant === "by_us" ? setByUsCommentText(e.target.value) : setByYouCommentText(e.target.value)}
               placeholder={user ? "ADD_COMMENT..." : "LOGIN_TO_COMMENT..."}
-              maxLength={500}
               disabled={!user}
-              className="flex-1 bg-transparent border-b border-zinc-800 focus:border-white outline-none text-sm text-zinc-300 placeholder:text-zinc-700 placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest pb-1 transition-colors disabled:opacity-40"
+              className="flex-1 bg-transparent border-b border-zinc-800 focus:border-white outline-none text-sm text-zinc-300 placeholder:text-zinc-700 placeholder:text-[10px] font-black uppercase pb-1 disabled:opacity-40"
             />
             <button
               type="submit"
-              disabled={submittingByUs || !byUsCommentText.trim() || !user}
-              className="flex items-center gap-2 bg-white text-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 disabled:opacity-40 transition-all shrink-0"
+              disabled={(variant === "by_us" ? submittingByUs : submittingByYou) || !(variant === "by_us" ? byUsCommentText : byYouCommentText).trim() || !user}
+              className="flex items-center gap-2 bg-white text-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 disabled:opacity-40 shrink-0"
             >
-              {submittingByUs ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-              Post
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* ── by_you comment panel ────────────────────────────────────���─────── */}
-      {variant === "by_you" && showByYouComments && (
-        <div
-          className="border-t border-zinc-900 bg-zinc-950 px-6 py-5 flex flex-col gap-4"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <CommentList comments={byYouComments} loading={loadingByYouComments} />
-          <form onSubmit={submitByYouComment} className="flex items-center gap-3 border-t border-zinc-900 pt-4">
-            <input
-              ref={byYouInputRef}
-              type="text"
-              value={byYouCommentText}
-              onChange={(e) => setByYouCommentText(e.target.value)}
-              placeholder={user ? "ADD_COMMENT..." : "LOGIN_TO_COMMENT..."}
-              maxLength={500}
-              disabled={!user}
-              className="flex-1 bg-transparent border-b border-zinc-800 focus:border-white outline-none text-sm text-zinc-300 placeholder:text-zinc-700 placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest pb-1 transition-colors disabled:opacity-40"
-            />
-            <button
-              type="submit"
-              disabled={submittingByYou || !byYouCommentText.trim() || !user}
-              className="flex items-center gap-2 bg-white text-black px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 disabled:opacity-40 transition-all shrink-0"
-            >
-              {submittingByYou ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+              {(variant === "by_us" ? submittingByUs : submittingByYou) ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
               Post
             </button>
           </form>

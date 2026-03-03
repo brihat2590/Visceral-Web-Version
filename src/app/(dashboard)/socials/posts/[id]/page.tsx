@@ -32,7 +32,7 @@ function getFallback(id: string): string {
 }
 
 function emailToName(email: string | null | undefined): string {
-  if (!email) return "Anonymous";
+  if (!email) return "Member";
   return email.split("@")[0].replace(/[._]/g, " ");
 }
 
@@ -42,11 +42,53 @@ interface PostComment {
   post_id: string;
   user_id?: string | null;
   commenter_email?: string | null;
+  username?: string | null;
   comment: string;
   created_at: string;
 }
 
+interface EnrichedByUsComment extends ByUsComment {
+  username?: string | null;
+  commenter_email?: string | null;
+}
+
 const supabase = createClient();
+
+// ── enrichWithUsernames ────────────────────────────────────────────────────
+async function enrichWithUsernames<
+  T extends { id: string; user_id?: string | null; comment: string; created_at: string }
+>(comments: T[]): Promise<(T & { username: string | null; commenter_email: string | null })[]> {
+  const userIds = Array.from(
+    new Set(comments.map((c) => c.user_id).filter(Boolean) as string[])
+  );
+
+  let usernameByUserId: Record<string, { username: string | null; email: string | null }> = {};
+
+  if (userIds.length > 0) {
+    const { data: userRows } = await supabase
+      .from("users")
+      .select("id, username, email")
+      .in("id", userIds);
+
+    if (userRows) {
+      for (const row of userRows) {
+        usernameByUserId[row.id] = {
+          username: row.username ?? null,
+          email: row.email ?? null,
+        };
+      }
+    }
+  }
+
+  return comments.map((c) => {
+    const resolved = c.user_id ? usernameByUserId[c.user_id] : null;
+    return {
+      ...c,
+      username: resolved?.username ?? null,
+      commenter_email: resolved?.email ?? null,
+    };
+  });
+}
 
 export default function PostDetailPage() {
   const params = useParams();
@@ -59,27 +101,41 @@ export default function PostDetailPage() {
   const [notFoundState, setNotFoundState] = useState(false);
   const [imgSrc, setImgSrc] = useState<string>("");
 
-  // ── by_us comment state ─────────────────────────────────────────────────
-  const [byUsComments, setByUsComments] = useState<ByUsComment[]>([]);
+  // ── current user's profile ────────────────────────────────────────────────
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ username: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("users")
+      .select("username")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setCurrentUserProfile(data);
+      });
+  }, [user]);
+
+  // ── by_us comment state ───────────────────────────────────────────────────
+  const [byUsComments, setByUsComments] = useState<EnrichedByUsComment[]>([]);
   const [byUsCommentText, setByUsCommentText] = useState("");
   const [loadingByUsComments, setLoadingByUsComments] = useState(false);
   const [submittingByUs, setSubmittingByUs] = useState(false);
   const byUsInputRef = useRef<HTMLInputElement>(null);
 
-  // ── by_you comment state ────────────────────────────────────────────────
+  // ── by_you comment state ──────────────────────────────────────────────────
   const [byYouComments, setByYouComments] = useState<PostComment[]>([]);
   const [byYouCommentText, setByYouCommentText] = useState("");
   const [loadingByYouComments, setLoadingByYouComments] = useState(false);
   const [submittingByYou, setSubmittingByYou] = useState(false);
   const byYouInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Fetch post ────────────────────────────────────────────────────────────
+  // ── Fetch post ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
     async function fetchPost() {
       setLoading(true);
 
-      // Try by_us first
       const { data: byUs } = await supabase
         .from("by_us")
         .select("id, title, post, created_at, image_url, source")
@@ -94,7 +150,6 @@ export default function PostDetailPage() {
         return;
       }
 
-      // Fall back to posts table — only columns that actually exist
       const { data: userPost } = await supabase
         .from("posts")
         .select("id, title, post, created_at, user_id")
@@ -104,7 +159,7 @@ export default function PostDetailPage() {
       if (userPost) {
         setPost(userPost as Post);
         setIsFromByUs(false);
-        setImgSrc(getFallback(id)); // posts has no image_url column
+        setImgSrc(getFallback(id));
       } else {
         setNotFoundState(true);
       }
@@ -113,7 +168,7 @@ export default function PostDetailPage() {
     fetchPost();
   }, [id]);
 
-  // ── Fetch by_us comments ──────────────────────────────────────────────────
+  // ── Fetch by_us comments ───────────────────────────────────────────────────
   useEffect(() => {
     if (!id || !isFromByUs) return;
     async function fetchComments() {
@@ -125,20 +180,15 @@ export default function PostDetailPage() {
         .order("created_at", { ascending: true });
 
       if (!error && data) {
-        setByUsComments(
-          data.map((c) => ({
-            ...c,
-            commenter_email:
-              user?.id && c.user_id === user.id ? user.email ?? null : null,
-          }))
-        );
+        const enriched = await enrichWithUsernames(data);
+        setByUsComments(enriched as EnrichedByUsComment[]);
       }
       setLoadingByUsComments(false);
     }
     fetchComments();
-  }, [id, isFromByUs, user]);
+  }, [id, isFromByUs]);
 
-  // ── Fetch by_you comments ─────────────────────────────────────────────────
+  // ── Fetch by_you comments ──────────────────────────────────────────────────
   useEffect(() => {
     if (!id || isFromByUs) return;
     async function fetchComments() {
@@ -150,20 +200,15 @@ export default function PostDetailPage() {
         .order("created_at", { ascending: true });
 
       if (!error && data) {
-        setByYouComments(
-          data.map((c) => ({
-            ...c,
-            commenter_email:
-              user?.id && c.user_id === user.id ? user.email ?? null : null,
-          }))
-        );
+        const enriched = await enrichWithUsernames(data);
+        setByYouComments(enriched as PostComment[]);
       }
       setLoadingByYouComments(false);
     }
     fetchComments();
-  }, [id, isFromByUs, user]);
+  }, [id, isFromByUs]);
 
-  // ── Submit by_us comment ──────────────────────────────────────────────────
+  // ── Submit by_us comment ───────────────────────────────────────────────────
   async function handleByUsSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = byUsCommentText.trim();
@@ -179,7 +224,11 @@ export default function PostDetailPage() {
     } else {
       setByUsComments((prev) => [
         ...prev,
-        { ...data, commenter_email: user.email ?? null },
+        {
+          ...data,
+          username: currentUserProfile?.username ?? null,
+          commenter_email: user.email ?? null,
+        },
       ]);
       setByUsCommentText("");
       toast.success("Comment posted.");
@@ -187,7 +236,7 @@ export default function PostDetailPage() {
     setSubmittingByUs(false);
   }
 
-  // ── Submit by_you comment ─────────────────────────────────────────────────
+  // ── Submit by_you comment ──────────────────────────────────────────────────
   async function handleByYouSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = byYouCommentText.trim();
@@ -203,7 +252,11 @@ export default function PostDetailPage() {
     } else {
       setByYouComments((prev) => [
         ...prev,
-        { ...data, commenter_email: user.email ?? null },
+        {
+          ...data,
+          username: currentUserProfile?.username ?? null,
+          commenter_email: user.email ?? null,
+        },
       ]);
       setByYouCommentText("");
       toast.success("Comment posted.");
@@ -211,12 +264,12 @@ export default function PostDetailPage() {
     setSubmittingByYou(false);
   }
 
-  // ── Shared comment list renderer ──────────────────────────────────────────
+  // ── Comment list renderer ──────────────────────────────────────────────────
   function CommentList({
     comments,
     loading,
   }: {
-    comments: (ByUsComment | PostComment)[];
+    comments: (EnrichedByUsComment | PostComment)[];
     loading: boolean;
   }) {
     if (loading)
@@ -235,11 +288,12 @@ export default function PostDetailPage() {
       <ul className="flex flex-col gap-5">
         {comments.map((c) => {
           const isMe = user?.id && c.user_id === user.id;
-          const displayName = c.commenter_email
-            ? emailToName(c.commenter_email)
-            : c.user_id
-            ? "Member"
-            : "Anonymous";
+          const displayName = (() => {
+            if (isMe) return "You";
+            if (c.username?.trim()) return c.username.trim();
+            if (c.commenter_email) return emailToName(c.commenter_email);
+            return "Member";
+          })();
           return (
             <li key={c.id} className="flex flex-col gap-2 border-l-2 border-zinc-800 pl-4">
               <div className="flex items-center gap-2">
@@ -247,7 +301,7 @@ export default function PostDetailPage() {
                   <User size={11} className="text-zinc-500" />
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
-                  {isMe ? "You" : displayName}
+                  {displayName}
                 </span>
                 <span className="text-[9px] text-zinc-700 font-black uppercase tracking-widest ml-auto">
                   {new Date(c.created_at).toLocaleDateString("en-US", {
@@ -300,7 +354,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div className="relative w-full">
         <div className="relative w-full h-[55vh] min-h-[360px]">
           <Image
@@ -324,7 +378,7 @@ export default function PostDetailPage() {
         </div>
       </div>
 
-      {/* ── Article ───────────────────────────────────────────────────────── */}
+      {/* ── Article ──────────────────────────────────────────────────────── */}
       <article className="max-w-3xl mx-auto px-6 md:px-0 pb-32 flex flex-col gap-10 -mt-16 relative z-10">
 
         {/* Source badge */}
@@ -350,7 +404,6 @@ export default function PostDetailPage() {
             <Clock size={11} />
             {readingTime} min read
           </span>
-          {/* Comment count in meta for both variants */}
           <span className="flex items-center gap-2 ml-auto">
             <MessageSquare size={11} />
             {isFromByUs
@@ -377,7 +430,7 @@ export default function PostDetailPage() {
 
         <div className="border-t border-zinc-900" />
 
-        {/* ── by_you: VoteButtons + BookmarkButton ─────────────────────────── */}
+        {/* ── by_you: VoteButtons + BookmarkButton ──────────────────────── */}
         {!isFromByUs && (
           <div className="flex items-center gap-4">
             <VoteButtons post={post} />
@@ -385,7 +438,7 @@ export default function PostDetailPage() {
           </div>
         )}
 
-        {/* ── Comments section (both variants) ─────────────────────────────── */}
+        {/* ── Comments section ──────────────────────────────────────────── */}
         <section className="flex flex-col gap-6">
           <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500 flex items-center gap-2">
             <MessageSquare size={13} />
