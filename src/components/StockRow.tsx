@@ -6,10 +6,12 @@ import { MarketStock } from "../types/stock";
 
 export default function StockRow({
   item,
-  onPress
+  onPress,
+  showYesterdayChange
 }: {
   item: MarketStock;
   onPress: () => void;
+  showYesterdayChange?: boolean;
 }) {
   const displaySymbol = getDisplaySymbol(item.symbol, item.market);
   const companyName = item.company_name ?? item.name;
