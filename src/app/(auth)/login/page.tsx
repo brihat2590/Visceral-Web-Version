@@ -6,10 +6,10 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { getUserOnboardingState, getOnboardingRedirectPath } from "@/lib/supabase/onBoarding";
 
 export default function Login() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +25,10 @@ export default function Login() {
 
     setLoading(true);
 
+    // ── Create client inside handler, not at module level ─────────────────
+    // Avoids stale session issues on re-renders (same fix as signup page)
+    const supabase = createClient();
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -38,14 +42,36 @@ export default function Login() {
       return;
     }
 
-    setLoading(false);
-    toast.success("Welcome back", {
-      description: "Login successful",
-    });
+    // ── Check onboarding state and redirect accordingly ────────────────────
+    // Mirrors your mobile: getUserOnboardingState() → getOnboardingRedirectPath()
+    // New user     → /intent-creation  (intent === "pending")
+    // Half done    → /market-experience (experience === "pending")
+    // Fully done   → /first-entry
+    try {
+      const onboarding = await getUserOnboardingState(supabase);
 
-    setTimeout(() => {
-      router.push("/first-entry");
-    });
+      setLoading(false);
+
+      if (!onboarding) {
+        toast.error("Login error", { description: "Unable to load profile" });
+        return;
+      }
+
+      toast.success("Welcome back", {
+        description: "Login successful",
+      });
+
+      // Mirrors: setTimeout(() => router.replace(getOnboardingRedirectPath(onboarding)), 800)
+      setTimeout(() => {
+        router.push(getOnboardingRedirectPath(onboarding));
+      }, 800);
+
+    } catch {
+      setLoading(false);
+      toast.error("Profile error", {
+        description: "Unable to determine onboarding state",
+      });
+    }
   };
 
   const handleForgotPassword = async () => {
@@ -55,6 +81,8 @@ export default function Login() {
       });
       return;
     }
+
+    const supabase = createClient();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -133,14 +161,14 @@ export default function Login() {
 
             {/* Secondary Links */}
             <div className="space-y-3 pt-4">
-              <button 
+              <button
                 onClick={handleForgotPassword}
                 className="block text-zinc-500 text-xs hover:text-zinc-300 transition-colors"
               >
                 Forgot password?
               </button>
-              <Link 
-                href="/signup" 
+              <Link
+                href="/signup"
                 className="block text-zinc-500 text-xs hover:text-zinc-300 transition-colors"
               >
                 Create free account
@@ -178,28 +206,27 @@ export default function Login() {
           </div>
 
           {/* Abstract Grid Graphic */}
-          {/* Abstract Grid Graphic */}
           <div className="relative h-48 w-full border border-white/5 overflow-hidden">
-             {/* The Grid: Changed from dark zinc to white/5 for a subtle mesh look */}
-             <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:24px_24px]" />
-             
-             <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
-                {/* The Graph Path: Set stroke to pure white and increased width slightly */}
-                <path 
-                  d="M0 160 Q 50 150, 100 170 T 200 140 T 300 180 T 400 150" 
-                  fill="none" 
-                  stroke="white" 
-                  strokeWidth="1"
-                  className="opacity-80"
-                />
-                {/* Optional: Second subtle line for "depth" seen in some trading UIs */}
-                <path 
-                  d="M0 140 Q 60 130, 120 150 T 240 120 T 360 160 T 400 130" 
-                  fill="none" 
-                  stroke="rgba(255,255,255,0.3)" 
-                  strokeWidth="0.5"
-                />
-             </svg>
+            {/* Subtle mesh grid */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
+              {/* Primary line */}
+              <path
+                d="M0 160 Q 50 150, 100 170 T 200 140 T 300 180 T 400 150"
+                fill="none"
+                stroke="white"
+                strokeWidth="1"
+                className="opacity-80"
+              />
+              {/* Secondary depth line */}
+              <path
+                d="M0 140 Q 60 130, 120 150 T 240 120 T 360 160 T 400 130"
+                fill="none"
+                stroke="rgba(255,255,255,0.3)"
+                strokeWidth="0.5"
+              />
+            </svg>
           </div>
         </motion.div>
       </div>

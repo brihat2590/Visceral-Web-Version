@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ArrowRight, Play, Terminal } from "lucide-react";
+import Link from "next/link";
 
 export default function HeroContent() {
   return (
@@ -37,10 +38,10 @@ export default function HeroContent() {
 
         {/* ⚡ Action Cluster */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
-          <button className="group relative px-8 py-4 bg-white rounded-full text-black font-bold text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+          <Link href={"/login"} className="group relative px-8 py-4 bg-white rounded-full text-black font-bold text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
             Get Started Free
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </button>
+          </Link>
           
           <button className="px-8 py-4 bg-transparent border border-zinc-800 rounded-full text-white font-bold text-sm uppercase tracking-widest hover:bg-zinc-900 transition-all flex items-center gap-2">
             <Play size={14} fill="currentColor" />
