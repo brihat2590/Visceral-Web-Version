@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, TrendingUp, TrendingDown, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, ChevronRight, RefreshCw } from "lucide-react";
 
 // Libs & Hooks
 import { getWatchList } from "@/api/watchlist";
@@ -12,6 +12,8 @@ import { formatPrice } from "@/lib/formatPrice";
 import VisceralLoader from "@/components/Loader";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://127.0.0.1:8000";
+// How long before we give up on the backend and show an error
+const HOME_FETCH_TIMEOUT_MS = 15_000;
 
 type WatchlistItem = {
   symbol: string;
@@ -23,21 +25,64 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, authloading } = useAuth();
 
+  // ── Start loading=true immediately so there's never a flash ──────────────
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!user?.id) return;
+    // Still waiting for auth — keep spinner showing
+    if (authloading) return;
+
+    // Auth resolved but no user
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    // Cancel any previous in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Timeout guard — aborts after HOME_FETCH_TIMEOUT_MS
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, HOME_FETCH_TIMEOUT_MS);
+
     setLoading(true);
-    fetch(`${BASE_URL}/home?user_id=${user.id}`)
-      .then((res) => res.json())
-      .then(setData)
-      .catch((err) => console.error("Home fetch error:", err))
-      .finally(() => setLoading(false));
-  }, [user?.id]);
+    setError(null);
+
+    fetch(`${BASE_URL}/home?user_id=${user.id}`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        return res.json();
+      })
+      .then((json) => {
+        setData(json);
+        setError(null);
+      })
+      .catch((err) => {
+        if (err.name === "AbortError") {
+          setError("Dashboard is taking longer than expected. Please try again.");
+        } else {
+          setError(err?.message ?? "Failed to load dashboard.");
+        }
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        setLoading(false);
+      });
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [authloading, user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -60,25 +105,90 @@ export default function HomeScreen() {
     fetchWatchlist();
   }, [user?.id]);
 
-  if (authloading || loading || !data) {
+  // ── Full-screen loader ────────────────────────────────────────────────────
+  if (authloading || loading) {
     return (
       <div className="flex min-h-screen bg-black items-center justify-center">
-        {/* <Loader2 className="w-8 h-8 text-white animate-spin opacity-50" /> */}
-
-        <div className="flex-col">
-        <VisceralLoader/>
-        
+        <div className="flex flex-col items-center gap-4">
+          <VisceralLoader />
+          <p className="text-neutral-500 text-xs tracking-widest uppercase animate-pulse">
+            Opening Dashboard
+          </p>
         </div>
       </div>
     );
   }
 
+  // ── Error state — graceful, with retry ───────────────────────────────────
+  if (error || !data) {
+    return (
+      <div className="flex min-h-screen bg-black items-center justify-center px-6">
+        <div className="text-center space-y-6 max-w-sm">
+          {/* Icon */}
+          <div className="w-12 h-12 rounded-full border border-neutral-800 bg-neutral-900 flex items-center justify-center mx-auto">
+            <RefreshCw size={20} className="text-neutral-500" />
+          </div>
+
+          {/* Message */}
+          <div className="space-y-2">
+            <p className="text-white text-sm font-medium">
+              {error ?? "Dashboard unavailable"}
+            </p>
+            <p className="text-neutral-500 text-xs leading-relaxed">
+              The server may be slow or temporarily unreachable.
+            </p>
+          </div>
+
+          {/* Retry button */}
+          <button
+            onClick={() => {
+              setError(null);
+              setData(null);
+              setLoading(true);
+
+              abortRef.current?.abort();
+              const controller = new AbortController();
+              abortRef.current = controller;
+              const timeout = setTimeout(() => controller.abort(), HOME_FETCH_TIMEOUT_MS);
+
+              fetch(`${BASE_URL}/home?user_id=${user?.id}`, { signal: controller.signal })
+                .then((res) => {
+                  if (!res.ok) throw new Error(`Server error ${res.status}`);
+                  return res.json();
+                })
+                .then((json) => { setData(json); setError(null); })
+                .catch((err) => {
+                  setError(
+                    err.name === "AbortError"
+                      ? "Dashboard is taking longer than expected. Please try again."
+                      : err?.message ?? "Failed to load dashboard."
+                  );
+                })
+                .finally(() => { clearTimeout(timeout); setLoading(false); });
+            }}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-black text-sm font-semibold hover:bg-zinc-200 active:scale-95 transition-all"
+          >
+            <RefreshCw size={14} />
+            Try again
+          </button>
+
+          {/* Back link */}
+          <button
+            onClick={() => router.push("/login")}
+            className="block text-neutral-600 text-xs hover:text-neutral-400 transition-colors mx-auto"
+          >
+            Back to login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main dashboard ────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-black text-white px-5 pt-10 pb-20 max-w-2xl md:max-w-4xl mx-auto">
-      {/* Balance Card Section */}  
       <BalanceCard data={data} />
 
-      {/* Almanack Analysis Section */}
       {data?.almanack?.system_analysis && (
         <AlmanackSection
           analysis={data.almanack.system_analysis}
@@ -87,7 +197,6 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Watchlist Section */}
       <WatchlistSection
         watchlist={watchlist}
         loading={watchlistLoading}
@@ -96,7 +205,6 @@ export default function HomeScreen() {
         }
       />
 
-      {/* Holdings Section */}
       <HoldingsSection
         holdings={data.holdings}
         onHoldingClick={(symbol) => router.push(`/stock-details/${symbol}`)}
@@ -105,7 +213,7 @@ export default function HomeScreen() {
   );
 }
 
-/* ═══════════════════════════════════════════ COMPONENT SECTIONS ═══════════════════════════════════════════ */
+/* ═══════════════════════ COMPONENT SECTIONS ═══════════════════════ */
 
 function BalanceCard({ data }: { data: any }) {
   return (
@@ -113,15 +221,10 @@ function BalanceCard({ data }: { data: any }) {
       <div className="flex justify-between items-center mb-6">
         <h2 className="section-label">Total Paper Balance</h2>
       </div>
-
       <div className="text-4xl font-light tracking-tight">
-        ${data.available_balance.toLocaleString("en-IN", {
-          minimumFractionDigits: 2,
-        })}
+        ${data.available_balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
       </div>
-
       <div className="divider-line my-6" />
-
       <div className="flex justify-between">
         <MiniStat
           label="Total Gain"
@@ -148,12 +251,11 @@ function AlmanackSection({
   onToggle: () => void;
 }) {
   return (
-    <button
-      onClick={onToggle}
-      className="w-full mt-8 text-left group"
-    >
+    <button onClick={onToggle} className="w-full mt-8 text-left group">
       <div className={`card-base rounded-2xl p-6 transition-all duration-300 ${
-        expanded ? "border-emerald-500/30 bg-gradient-to-br from-black via-black to-emerald-950/10" : "hover:border-neutral-700"
+        expanded
+          ? "border-emerald-500/30 bg-gradient-to-br from-black via-black to-emerald-950/10"
+          : "hover:border-neutral-700"
       }`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="section-label">Almanack Analysis</h2>
@@ -161,23 +263,15 @@ function AlmanackSection({
             <ChevronRight size={16} />
           </div>
         </div>
-
         <div className="divider-line mb-4" />
-
         {expanded ? (
           <div className="animate-in fade-in duration-300 space-y-4">
-            <p className="text-neutral-100 text-sm leading-8 font-light">
-              {analysis}
-            </p>
-            <p className="text-neutral-600 text-xs italic">
-              Tap to collapse
-            </p>
+            <p className="text-neutral-100 text-sm leading-8 font-light">{analysis}</p>
+            <p className="text-neutral-600 text-xs italic">Tap to collapse</p>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-neutral-300 text-sm leading-6 line-clamp-3 font-light">
-              {analysis}
-            </p>
+            <p className="text-neutral-300 text-sm leading-6 line-clamp-3 font-light">{analysis}</p>
             <p className="text-neutral-500 text-xs group-hover:text-neutral-300 transition-colors flex items-center gap-1">
               Tap to expand →
             </p>
@@ -205,14 +299,13 @@ function WatchlistSection({
           SEE ALL
         </button>
       </div>
-
       {loading ? (
-        <div className="flex py-4 justify-center">
-          <VisceralLoader/>
-          <div>
-            Opening Dashboard
-          </div>
+        <div className="flex items-center justify-center py-6 gap-3">
+          <VisceralLoader />
+          <span className="text-neutral-500 text-xs tracking-wider">Loading watchlist...</span>
         </div>
+      ) : watchlist.length === 0 ? (
+        <p className="text-neutral-700 text-sm italic py-4">No items in watchlist yet.</p>
       ) : (
         <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide -mx-5 px-5">
           {watchlist.map((item, idx) => (
@@ -238,12 +331,9 @@ function HoldingsSection({
   return (
     <section className="mt-10">
       <h2 className="section-label mb-4">Your Holdings</h2>
-
       {holdings.length === 0 ? (
         <div className="py-10 border border-dashed border-neutral-800 rounded-2xl text-center">
-          <p className="text-neutral-600 text-sm italic">
-            No assets acquired yet.
-          </p>
+          <p className="text-neutral-600 text-sm italic">No assets acquired yet.</p>
         </div>
       ) : (
         <div className="flex flex-col">
@@ -260,7 +350,7 @@ function HoldingsSection({
   );
 }
 
-/* ═══════════════════════════════════════════ SUB-COMPONENTS ═══════════════════════════════════════════ */
+/* ═══════════════════════ SUB-COMPONENTS ═══════════════════════ */
 
 function MiniStat({
   label,
@@ -273,14 +363,8 @@ function MiniStat({
 }) {
   return (
     <div>
-      <p className="text-neutral-500 text-[9px] font-bold tracking-widest uppercase">
-        {label}
-      </p>
-      <div
-        className={`text-lg font-medium mt-1 flex items-center gap-1 ${
-          positive ? "text-emerald-400" : "text-rose-500"
-        }`}
-      >
+      <p className="text-neutral-500 text-[9px] font-bold tracking-widest uppercase">{label}</p>
+      <div className={`text-lg font-medium mt-1 flex items-center gap-1 ${positive ? "text-emerald-400" : "text-rose-500"}`}>
         {positive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
         {value}
       </div>
@@ -335,39 +419,24 @@ function HoldingRow({
       className="flex justify-between items-center py-5 border-b border-neutral-900 group text-left hover:px-2 transition-all"
     >
       <div className="flex-1">
-        <div className="text-white text-base font-semibold tracking-tight">
-          {displaySymbol}
-        </div>
+        <div className="text-white text-base font-semibold tracking-tight">{displaySymbol}</div>
         {holding.company_name && (
           <div className="text-neutral-500 text-xs mt-0.5 truncate max-w-[180px]">
             {holding.company_name}
           </div>
         )}
-        <div className="text-neutral-600 text-[10px] mt-1">
-          {holding.quantity} Units
-        </div>
+        <div className="text-neutral-600 text-[10px] mt-1">{holding.quantity} Units</div>
       </div>
-
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <div className="text-white font-medium text-base">
-            {formatPrice(value, market)}
-          </div>
-          <div
-            className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[11px] font-bold ${
-              isPositive
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "bg-rose-500/10 text-rose-400"
-            }`}
-          >
-            {pnlPercentage >= 0 ? "+" : ""}
-            {pnlPercentage.toFixed(2)}%
+          <div className="text-white font-medium text-base">{formatPrice(value, market)}</div>
+          <div className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[11px] font-bold ${
+            isPositive ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+          }`}>
+            {pnlPercentage >= 0 ? "+" : ""}{pnlPercentage.toFixed(2)}%
           </div>
         </div>
-        <ChevronRight
-          size={16}
-          className="text-neutral-800 group-hover:text-neutral-500 transition-colors"
-        />
+        <ChevronRight size={16} className="text-neutral-800 group-hover:text-neutral-500 transition-colors" />
       </div>
     </button>
   );
