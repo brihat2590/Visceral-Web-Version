@@ -54,13 +54,13 @@ export default function PostComposer({ onPost }: { onPost: () => void }) {
     <div className="border border-zinc-900 bg-zinc-950 p-6 space-y-4">
       <input
         type="text"
-        placeholder="SIGNAL_TITLE"
+        placeholder="Enter Article Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full bg-transparent border-b border-zinc-900 pb-2 text-xl font-black uppercase italic outline-none focus:border-white transition-colors"
       />
       <textarea
-        placeholder="Enter your transmission details..."
+        placeholder="Enter description of your article.."
         value={content}
         onChange={(e) => setContent(e.target.value)}
         className="w-full bg-transparent text-zinc-400 text-sm leading-relaxed outline-none min-h-[100px] resize-none"

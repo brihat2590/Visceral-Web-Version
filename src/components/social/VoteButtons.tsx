@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function VoteButtons({ post }: { post: Post }) {
-  // ✅ FIX #1 & #2 — useAuth called at top level, single auth source
   const { user } = useAuth();
   const supabase = createClient();
 
@@ -18,9 +17,26 @@ export default function VoteButtons({ post }: { post: Post }) {
     down: post.downvotes || 0,
   });
 
-  // ✅ FIX #3 — user added to dependency array
   useEffect(() => {
-    const checkVote = async () => {
+    const init = async () => {
+      // ── Always fetch real counts from the tables ──────────────────────
+      const [upCount, downCount] = await Promise.all([
+        supabase
+          .from("upvotes")
+          .select("id", { count: "exact", head: true })
+          .eq("post_id", post.id),
+        supabase
+          .from("downvotes")
+          .select("id", { count: "exact", head: true })
+          .eq("post_id", post.id),
+      ]);
+
+      setCounts({
+        up: upCount.count ?? 0,
+        down: downCount.count ?? 0,
+      });
+
+      // ── Check current user's vote status ──────────────────────────────
       if (!user) return;
 
       const [up, down] = await Promise.all([
@@ -40,11 +56,10 @@ export default function VoteButtons({ post }: { post: Post }) {
       else if (down.data) setVoteStatus("down");
     };
 
-    checkVote();
-  }, [post.id, user]); // ✅ user is a dependency
+    init();
+  }, [post.id, user]);
 
   async function handleVote(type: "up" | "down") {
-    // ✅ FIX #2 — use the hook's user, no extra async auth call
     if (!user) {
       toast.error("Please sign in to vote.");
       return;
@@ -54,7 +69,6 @@ export default function VoteButtons({ post }: { post: Post }) {
     const opposite = type === "up" ? "down" : "up";
     const wasOpposite = voteStatus === opposite;
 
-    // ✅ FIX #4 & #5 — snapshot state before optimistic update for rollback
     const previousCounts = counts;
     const previousVoteStatus = voteStatus;
 
@@ -67,27 +81,22 @@ export default function VoteButtons({ post }: { post: Post }) {
     }));
 
     try {
-      // 1. Always clear the opposite vote first
       await supabase
         .from(`${opposite}votes`)
         .delete()
         .match({ post_id: post.id, user_id: user.id });
 
       if (isRemoving) {
-        // 2. Toggle off — remove current vote
         await supabase
           .from(`${type}votes`)
           .delete()
           .match({ post_id: post.id, user_id: user.id });
       } else {
-        // 3. Insert or update new vote
         await supabase
           .from(`${type}votes`)
           .upsert({ post_id: post.id, user_id: user.id });
       }
     } catch (error) {
-      // ✅ FIX #4 — roll back to actual previous counts (not stale prop)
-      // ✅ FIX #5 — also roll back voteStatus (was missing entirely)
       toast.error("Vote failed. Please try again.");
       setCounts(previousCounts);
       setVoteStatus(previousVoteStatus);

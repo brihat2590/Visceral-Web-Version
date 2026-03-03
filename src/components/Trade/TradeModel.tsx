@@ -126,8 +126,8 @@ export default function TradeModal({
       setTimeout(() => {
         router.replace(
           type === "BUY"
-            ? "/confirmation/buy-confirmed"
-            : "/confirmation/sell-confirmed"
+            ? "/buy-confirmed"
+            : "/sell-confirmed"
         );
       }, 500);
 

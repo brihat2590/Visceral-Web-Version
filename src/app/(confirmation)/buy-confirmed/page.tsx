@@ -2,24 +2,31 @@
 import React, { useState, useEffect } from 'react';
 import { Check } from 'lucide-react'; 
 import { useRouter } from 'next/navigation';
-
-
+import VisceralLoader from '@/components/Loader';
 
 const ConfirmationModal = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isRouting, setIsRouting] = useState(false); // ✅ added
   const router = useRouter();
 
   useEffect(() => {
-    // Trigger animation after mount
     const t = setTimeout(() => setMounted(true), 10);
     return () => clearTimeout(t);
   }, []);
 
+  // ✅ Show loader during routing
+  if (isRouting) {
+    return (
+      <div className="fixed inset-0 z-[999] bg-black flex items-center justify-center">
+        <VisceralLoader />
+      </div>
+    );
+  }
+
   if (!isOpen) return null;
 
   return (
-    
     <>
       <style>{`
         @keyframes backdropFadeIn {
@@ -111,7 +118,6 @@ const ConfirmationModal = () => {
           transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
         }
 
-        /* Subtle scanline texture on card */
         .modal-card::before {
           content: '';
           position: absolute;
@@ -127,7 +133,6 @@ const ConfirmationModal = () => {
           pointer-events: none;
         }
 
-        /* Glowing top border accent */
         .modal-card::after {
           content: '';
           position: absolute;
@@ -139,25 +144,19 @@ const ConfirmationModal = () => {
         }
       `}</style>
 
-      
-
       <div
         className="backdrop fixed inset-0 z-50 flex items-center justify-center"
         style={{ background: 'rgba(0,0,0,0.96)', backdropFilter: 'blur(4px)' }}
       >
         <div className="flex flex-col items-center w-full max-w-md px-6">
 
-          {/* Card */}
           <div
             className="modal-card relative w-full rounded-2xl p-10 flex flex-col items-center mb-8 overflow-hidden"
             style={{
               background: '#000000',
-              // border: '1px solid rgba(255,255,255,0.07)',
               boxShadow: '0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
             }}
           >
-
-            {/* Check circle */}
             <div
               className="icon-ring w-20 h-20 rounded-full flex items-center justify-center mb-8"
               style={{
@@ -171,18 +170,15 @@ const ConfirmationModal = () => {
               />
             </div>
 
-            {/* Title */}
             <h1 className="heading text-white text-2xl font-semibold mb-3 tracking-tight">
               Buy confirmed
             </h1>
 
-            {/* Subtext */}
             <p className="subtext text-center text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.38)' }}>
               Your position has been added.<br />
               Reflection saved to Almanack
             </p>
 
-            {/* Subtle corner decorations */}
             <div style={{
               position: 'absolute', bottom: 12, right: 16,
               width: 40, height: 40,
@@ -199,10 +195,9 @@ const ConfirmationModal = () => {
             }} />
           </div>
 
-          {/* Button */}
           <button
             onClick={() => {
-              setIsOpen(false);
+              setIsRouting(true); // ✅ show loader
               router.push("/first-entry");
             }}
             className="done-btn w-full max-w-[200px] bg-white text-black py-4 rounded-xl font-bold"

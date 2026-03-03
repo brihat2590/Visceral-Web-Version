@@ -10,7 +10,7 @@ import FriendsPanel from "@/components/social/FriendsPanel";
 import VisceralLoader from "@/components/Loader";
 
 import { Post } from "@/types/social";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, PenLine, X } from "lucide-react";
 
 const supabase = createClient();
 
@@ -20,6 +20,7 @@ export default function SocialPage() {
   const [labTab, setLabTab] = useState<"by_us" | "by_you">("by_us");
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showComposer, setShowComposer] = useState(false); // ← new
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -30,18 +31,11 @@ export default function SocialPage() {
         ? "id, title, post, created_at, image_url, source"
         : "id, title, post, created_at, user_id";
 
-    let query = supabase
+    const { data, error } = await supabase
       .from(tableSource)
       .select(selection)
       .order("created_at", { ascending: false })
       .limit(20);
-
-    // Server-side filter for "by_you" so limit(20) doesn't hide your posts
-    if (labTab === "by_you" && user?.id) {
-      query = query.eq("user_id", user.id);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       console.error("DATA_FETCH_ERROR:", error.message);
@@ -52,11 +46,16 @@ export default function SocialPage() {
 
     setPosts(((data as unknown) as Post[]) ?? []);
     setLoading(false);
-  }, [labTab, user?.id]);
+  }, [labTab]);
 
   useEffect(() => {
     if (mainTab === "lab") fetchPosts();
   }, [mainTab, labTab, fetchPosts]);
+
+  // Close composer when switching tabs
+  useEffect(() => {
+    setShowComposer(false);
+  }, [labTab]);
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-10">
@@ -109,7 +108,41 @@ export default function SocialPage() {
         <main className="flex flex-col gap-10">
           {mainTab === "lab" ? (
             <>
-              {labTab === "by_you" && <PostComposer onPost={fetchPosts} />}
+              {/* ── by_you: Post an Article button + toggled composer ── */}
+              {labTab === "by_you" && (
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={() => setShowComposer((v) => !v)}
+                    className={`flex items-center gap-3 self-start px-6 py-3 border text-[10px] font-black uppercase tracking-widest transition-all ${
+                      showComposer
+                        ? "border-zinc-600 bg-zinc-900 text-white"
+                        : "border-zinc-800 text-zinc-500 hover:border-white hover:text-white"
+                    }`}
+                  >
+                    {showComposer ? (
+                      <>
+                        <X size={13} />
+                        Cancel
+                      </>
+                    ) : (
+                      <>
+                        <PenLine size={13} />
+                        Post an Article
+                      </>
+                    )}
+                  </button>
+
+                  {/* Composer slides in when open */}
+                  {showComposer && (
+                    <PostComposer
+                      onPost={() => {
+                        setShowComposer(false); // close after posting
+                        fetchPosts();
+                      }}
+                    />
+                  )}
+                </div>
+              )}
 
               {loading ? (
                 <div className="py-20 flex justify-center">
@@ -120,7 +153,15 @@ export default function SocialPage() {
                   Directory Empty
                 </p>
               ) : (
-                posts.map((post) => <PostCard key={post.id} post={post} />)
+                posts
+                  .filter((post): post is Post => Boolean(post?.id))
+                  .map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      variant={labTab}
+                    />
+                  ))
               )}
             </>
           ) : (

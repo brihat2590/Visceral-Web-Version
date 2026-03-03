@@ -36,6 +36,16 @@ function emailToName(email: string | null | undefined): string {
   return email.split("@")[0].replace(/[._]/g, " ");
 }
 
+// Shape for comments table (by_you)
+interface PostComment {
+  id: string;
+  post_id: string;
+  user_id?: string | null;
+  commenter_email?: string | null;
+  comment: string;
+  created_at: string;
+}
+
 const supabase = createClient();
 
 export default function PostDetailPage() {
@@ -49,18 +59,27 @@ export default function PostDetailPage() {
   const [notFoundState, setNotFoundState] = useState(false);
   const [imgSrc, setImgSrc] = useState<string>("");
 
-  // comments
-  const [comments, setComments] = useState<ByUsComment[]>([]);
-  const [commentText, setCommentText] = useState("");
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  // ── by_us comment state ─────────────────────────────────────────────────
+  const [byUsComments, setByUsComments] = useState<ByUsComment[]>([]);
+  const [byUsCommentText, setByUsCommentText] = useState("");
+  const [loadingByUsComments, setLoadingByUsComments] = useState(false);
+  const [submittingByUs, setSubmittingByUs] = useState(false);
+  const byUsInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Fetch post ─────────────────────────────────────────────────────────────
+  // ── by_you comment state ────────────────────────────────────────────────
+  const [byYouComments, setByYouComments] = useState<PostComment[]>([]);
+  const [byYouCommentText, setByYouCommentText] = useState("");
+  const [loadingByYouComments, setLoadingByYouComments] = useState(false);
+  const [submittingByYou, setSubmittingByYou] = useState(false);
+  const byYouInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Fetch post ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
     async function fetchPost() {
       setLoading(true);
+
+      // Try by_us first
       const { data: byUs } = await supabase
         .from("by_us")
         .select("id, title, post, created_at, image_url, source")
@@ -75,16 +94,17 @@ export default function PostDetailPage() {
         return;
       }
 
+      // Fall back to posts table — only columns that actually exist
       const { data: userPost } = await supabase
         .from("posts")
-        .select("id, title, post, created_at, image_url, source, upvotes, downvotes, user_id")
+        .select("id, title, post, created_at, user_id")
         .eq("id", id)
         .maybeSingle();
 
       if (userPost) {
         setPost(userPost as Post);
         setIsFromByUs(false);
-        setImgSrc(userPost.image_url ?? getFallback(id));
+        setImgSrc(getFallback(id)); // posts has no image_url column
       } else {
         setNotFoundState(true);
       }
@@ -93,11 +113,11 @@ export default function PostDetailPage() {
     fetchPost();
   }, [id]);
 
-  // ── Fetch by_us comments ───────────────────────────────────────────────────
+  // ── Fetch by_us comments ──────────────────────────────────────────────────
   useEffect(() => {
     if (!id || !isFromByUs) return;
     async function fetchComments() {
-      setLoadingComments(true);
+      setLoadingByUsComments(true);
       const { data, error } = await supabase
         .from("by_us_comments")
         .select("id, by_us_id, comment, created_at, user_id")
@@ -105,44 +125,144 @@ export default function PostDetailPage() {
         .order("created_at", { ascending: true });
 
       if (!error && data) {
-        // Tag current user's email on their own comments
-        const enriched: ByUsComment[] = data.map((c) => ({
-          ...c,
-          commenter_email:
-            user?.id && c.user_id === user.id ? user.email ?? null : null,
-        }));
-        setComments(enriched);
+        setByUsComments(
+          data.map((c) => ({
+            ...c,
+            commenter_email:
+              user?.id && c.user_id === user.id ? user.email ?? null : null,
+          }))
+        );
       }
-      setLoadingComments(false);
+      setLoadingByUsComments(false);
     }
     fetchComments();
   }, [id, isFromByUs, user]);
 
-  // ── Submit comment ─────────────────────────────────────────────────────────
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const text = commentText.trim();
-    if (!text || !user) return;
+  // ── Fetch by_you comments ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!id || isFromByUs) return;
+    async function fetchComments() {
+      setLoadingByYouComments(true);
+      const { data, error } = await supabase
+        .from("comments")
+        .select("id, post_id, comment, created_at, user_id")
+        .eq("post_id", id)
+        .order("created_at", { ascending: true });
 
-    setSubmitting(true);
+      if (!error && data) {
+        setByYouComments(
+          data.map((c) => ({
+            ...c,
+            commenter_email:
+              user?.id && c.user_id === user.id ? user.email ?? null : null,
+          }))
+        );
+      }
+      setLoadingByYouComments(false);
+    }
+    fetchComments();
+  }, [id, isFromByUs, user]);
+
+  // ── Submit by_us comment ──────────────────────────────────────────────────
+  async function handleByUsSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const text = byUsCommentText.trim();
+    if (!text || !user) return;
+    setSubmittingByUs(true);
     const { data, error } = await supabase
       .from("by_us_comments")
       .insert([{ by_us_id: id, comment: text, user_id: user.id }])
       .select("id, by_us_id, comment, created_at, user_id")
       .single();
-
     if (error) {
       toast.error("Failed to post comment.");
     } else {
-      const newComment: ByUsComment = {
-        ...data,
-        commenter_email: user.email ?? null,
-      };
-      setComments((prev) => [...prev, newComment]);
-      setCommentText("");
+      setByUsComments((prev) => [
+        ...prev,
+        { ...data, commenter_email: user.email ?? null },
+      ]);
+      setByUsCommentText("");
       toast.success("Comment posted.");
     }
-    setSubmitting(false);
+    setSubmittingByUs(false);
+  }
+
+  // ── Submit by_you comment ─────────────────────────────────────────────────
+  async function handleByYouSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const text = byYouCommentText.trim();
+    if (!text || !user) return;
+    setSubmittingByYou(true);
+    const { data, error } = await supabase
+      .from("comments")
+      .insert([{ post_id: id, comment: text, user_id: user.id }])
+      .select("id, post_id, comment, created_at, user_id")
+      .single();
+    if (error) {
+      toast.error("Failed to post comment.");
+    } else {
+      setByYouComments((prev) => [
+        ...prev,
+        { ...data, commenter_email: user.email ?? null },
+      ]);
+      setByYouCommentText("");
+      toast.success("Comment posted.");
+    }
+    setSubmittingByYou(false);
+  }
+
+  // ── Shared comment list renderer ──────────────────────────────────────────
+  function CommentList({
+    comments,
+    loading,
+  }: {
+    comments: (ByUsComment | PostComment)[];
+    loading: boolean;
+  }) {
+    if (loading)
+      return (
+        <div className="flex justify-center py-8">
+          <Loader2 size={18} className="animate-spin text-zinc-600" />
+        </div>
+      );
+    if (comments.length === 0)
+      return (
+        <p className="text-[10px] text-zinc-700 uppercase tracking-widest text-center py-8 border border-dashed border-zinc-900">
+          No comments yet — be the first.
+        </p>
+      );
+    return (
+      <ul className="flex flex-col gap-5">
+        {comments.map((c) => {
+          const isMe = user?.id && c.user_id === user.id;
+          const displayName = c.commenter_email
+            ? emailToName(c.commenter_email)
+            : c.user_id
+            ? "Member"
+            : "Anonymous";
+          return (
+            <li key={c.id} className="flex flex-col gap-2 border-l-2 border-zinc-800 pl-4">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-900 border border-zinc-800 shrink-0">
+                  <User size={11} className="text-zinc-500" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
+                  {isMe ? "You" : displayName}
+                </span>
+                <span className="text-[9px] text-zinc-700 font-black uppercase tracking-widest ml-auto">
+                  {new Date(c.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+              <p className="text-zinc-400 text-sm leading-relaxed pl-8">{c.comment}</p>
+            </li>
+          );
+        })}
+      </ul>
+    );
   }
 
   if (loading) {
@@ -180,7 +300,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="relative w-full">
         <div className="relative w-full h-[55vh] min-h-[360px]">
           <Image
@@ -204,13 +324,14 @@ export default function PostDetailPage() {
         </div>
       </div>
 
-      {/* ── Article ─────────────────────────────────────────────────────── */}
+      {/* ── Article ───────────────────────────────────────────────────────── */}
       <article className="max-w-3xl mx-auto px-6 md:px-0 pb-32 flex flex-col gap-10 -mt-16 relative z-10">
+
         {/* Source badge */}
         <div className="flex items-center gap-2 text-zinc-600">
           <Terminal size={11} />
           <span className="text-[9px] font-black uppercase tracking-[0.4em]">
-            {post.source || "BY_US_INTERNAL"}
+            {isFromByUs ? post.source || "BY_US_INTERNAL" : "BY_YOU"}
           </span>
         </div>
 
@@ -229,13 +350,17 @@ export default function PostDetailPage() {
             <Clock size={11} />
             {readingTime} min read
           </span>
-          {isFromByUs && (
-            <span className="flex items-center gap-2 ml-auto">
-              <MessageSquare size={11} />
-              {loadingComments ? "..." : comments.length}{" "}
-              {comments.length === 1 ? "comment" : "comments"}
-            </span>
-          )}
+          {/* Comment count in meta for both variants */}
+          <span className="flex items-center gap-2 ml-auto">
+            <MessageSquare size={11} />
+            {isFromByUs
+              ? loadingByUsComments ? "..." : byUsComments.length
+              : loadingByYouComments ? "..." : byYouComments.length
+            }{" "}
+            {(isFromByUs ? byUsComments : byYouComments).length === 1
+              ? "comment"
+              : "comments"}
+          </span>
         </div>
 
         {/* Body */}
@@ -252,7 +377,7 @@ export default function PostDetailPage() {
 
         <div className="border-t border-zinc-900" />
 
-        {/* Bottom actions — only for by_you posts */}
+        {/* ── by_you: VoteButtons + BookmarkButton ─────────────────────────── */}
         {!isFromByUs && (
           <div className="flex items-center gap-4">
             <VoteButtons post={post} />
@@ -260,94 +385,69 @@ export default function PostDetailPage() {
           </div>
         )}
 
-        {/* ── Comments section (by_us only) ──────────────────────────────── */}
-        {isFromByUs && (
-          <section className="flex flex-col gap-6">
-            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500 flex items-center gap-2">
-              <MessageSquare size={13} />
-              Discussion
-            </h2>
+        {/* ── Comments section (both variants) ─────────────────────────────── */}
+        <section className="flex flex-col gap-6">
+          <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500 flex items-center gap-2">
+            <MessageSquare size={13} />
+            Discussion
+          </h2>
 
-            {/* Comment list */}
-            {loadingComments ? (
-              <div className="flex justify-center py-8">
-                <Loader2 size={18} className="animate-spin text-zinc-600" />
-              </div>
-            ) : comments.length === 0 ? (
-              <p className="text-[10px] text-zinc-700 uppercase tracking-widest text-center py-8 border border-dashed border-zinc-900">
-                No comments yet — be the first.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-5">
-                {comments.map((c) => {
-                  const isMe = user?.id && c.user_id === user.id;
-                  const displayName = c.commenter_email
-                    ? emailToName(c.commenter_email)
-                    : c.user_id
-                    ? "Member"
-                    : "Anonymous";
-
-                  return (
-                    <li
-                      key={c.id}
-                      className="flex flex-col gap-2 border-l-2 border-zinc-800 pl-4"
-                    >
-                      {/* Identity row */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-900 border border-zinc-800 shrink-0">
-                          <User size={11} className="text-zinc-500" />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
-                          {isMe ? "You" : displayName}
-                        </span>
-                        <span className="text-[9px] text-zinc-700 font-black uppercase tracking-widest ml-auto">
-                          {new Date(c.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      {/* Comment text */}
-                      <p className="text-zinc-400 text-sm leading-relaxed pl-8">
-                        {c.comment}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {/* Compose */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-center gap-3 border-t border-zinc-900 pt-6"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder={user ? "ADD_COMMENT..." : "LOGIN_TO_COMMENT..."}
-                maxLength={500}
-                disabled={!user}
-                className="flex-1 bg-transparent border-b border-zinc-800 focus:border-white outline-none text-sm text-zinc-300 placeholder:text-zinc-700 placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest pb-2 transition-colors disabled:opacity-40"
-              />
-              <button
-                type="submit"
-                disabled={submitting || !commentText.trim() || !user}
-                className="flex items-center gap-2 bg-white text-black px-5 py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 disabled:opacity-40 transition-all shrink-0"
+          {isFromByUs ? (
+            <>
+              <CommentList comments={byUsComments} loading={loadingByUsComments} />
+              <form
+                onSubmit={handleByUsSubmit}
+                className="flex items-center gap-3 border-t border-zinc-900 pt-6"
               >
-                {submitting ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Send size={12} />
-                )}
-                Post
-              </button>
-            </form>
-          </section>
-        )}
+                <input
+                  ref={byUsInputRef}
+                  type="text"
+                  value={byUsCommentText}
+                  onChange={(e) => setByUsCommentText(e.target.value)}
+                  placeholder={user ? "ADD_COMMENT..." : "LOGIN_TO_COMMENT..."}
+                  maxLength={500}
+                  disabled={!user}
+                  className="flex-1 bg-transparent border-b border-zinc-800 focus:border-white outline-none text-sm text-zinc-300 placeholder:text-zinc-700 placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest pb-2 transition-colors disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={submittingByUs || !byUsCommentText.trim() || !user}
+                  className="flex items-center gap-2 bg-white text-black px-5 py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 disabled:opacity-40 transition-all shrink-0"
+                >
+                  {submittingByUs ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                  Post
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <CommentList comments={byYouComments} loading={loadingByYouComments} />
+              <form
+                onSubmit={handleByYouSubmit}
+                className="flex items-center gap-3 border-t border-zinc-900 pt-6"
+              >
+                <input
+                  ref={byYouInputRef}
+                  type="text"
+                  value={byYouCommentText}
+                  onChange={(e) => setByYouCommentText(e.target.value)}
+                  placeholder={user ? "ADD_COMMENT..." : "LOGIN_TO_COMMENT..."}
+                  maxLength={500}
+                  disabled={!user}
+                  className="flex-1 bg-transparent border-b border-zinc-800 focus:border-white outline-none text-sm text-zinc-300 placeholder:text-zinc-700 placeholder:text-[10px] placeholder:font-black placeholder:uppercase placeholder:tracking-widest pb-2 transition-colors disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={submittingByYou || !byYouCommentText.trim() || !user}
+                  className="flex items-center gap-2 bg-white text-black px-5 py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 disabled:opacity-40 transition-all shrink-0"
+                >
+                  {submittingByYou ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                  Post
+                </button>
+              </form>
+            </>
+          )}
+        </section>
       </article>
     </div>
   );
