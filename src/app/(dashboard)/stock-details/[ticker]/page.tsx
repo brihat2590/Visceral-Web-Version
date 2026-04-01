@@ -26,9 +26,12 @@ import { toast } from "sonner";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  Cell,
+  YAxis,
   ResponsiveContainer,
   Tooltip,
-  ReferenceLine,
 } from "recharts";
 
 // ── Constants ──────────────────────────────────────────────
@@ -50,6 +53,9 @@ const CHART_MAX_RENDER_POINTS = 180;
 // ── Types ──────────────────────────────────────────────────
 type ChartPoint = {
   timestamp: string;
+  open: number;
+  high: number;
+  low: number;
   close: number;
 };
 
@@ -204,16 +210,29 @@ function ChartTooltip({
   active,
   payload,
   selectedRange,
+  market,
+  chartMode,
 }: {
   active?: boolean;
   payload?: any[];
   selectedRange: string;
+  market: string;
+  chartMode: "line" | "candles";
 }) {
   if (!active || !payload?.length) return null;
   const point: ChartPoint = payload[0].payload;
   return (
-    <div className="bg-[#111827] border border-[#374151] rounded-lg px-3 py-1.5 text-xs font-semibold text-[#E5E7EB]">
-      {formatChartTimestamp(point.timestamp, selectedRange)}
+    <div className="bg-[#111827] border border-[#374151] rounded-lg px-3 py-2 text-xs font-semibold text-[#E5E7EB] space-y-1">
+      <p>{formatChartTimestamp(point.timestamp, selectedRange)}</p>
+      {chartMode === "candles" ? (
+        <p className="text-[11px] text-[#D1D5DB] font-medium">
+          O {formatPrice(point.open, market)} | H {formatPrice(point.high, market)} | L {formatPrice(point.low, market)} | C {formatPrice(point.close, market)}
+        </p>
+      ) : (
+        <p className="text-[11px] text-[#D1D5DB] font-medium">
+          Price: {formatPrice(point.close, market)}
+        </p>
+      )}
     </div>
   );
 }
@@ -238,6 +257,7 @@ export default function StockDetailsPage() {
   const [watchlistLoading, setWatchlistLoading] = useState(false);
   const [stock, setStock] = useState<any>(null);
   const [range, setRange] = useState(ONE_DAY_RANGE);
+  const [chartMode, setChartMode] = useState<"line" | "candles">("line");
   const [loading, setLoading] = useState(true);
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
   const [tradeType, setTradeType] = useState<"BUY" | "SELL" | null>(null);
@@ -457,10 +477,19 @@ export default function StockDetailsPage() {
 
   const chartPoints: ChartPoint[] = stockSeries
     .map((d: any) => ({
+      open: Number.isFinite(Number(d?.open)) ? Number(d?.open) : Number(d?.close),
+      high: Number.isFinite(Number(d?.high)) ? Number(d?.high) : Number(d?.close),
+      low: Number.isFinite(Number(d?.low)) ? Number(d?.low) : Number(d?.close),
       close: Number(d?.close),
       timestamp: typeof d?.timestamp === "string" ? d.timestamp : "",
     }))
-    .filter((point: ChartPoint) => Number.isFinite(point.close))
+    .filter(
+      (point: ChartPoint) =>
+        Number.isFinite(point.close) &&
+        Number.isFinite(point.open) &&
+        Number.isFinite(point.high) &&
+        Number.isFinite(point.low)
+    )
     .sort((a: ChartPoint, b: ChartPoint) => {
       const aTs = Date.parse(a.timestamp);
       const bTs = Date.parse(b.timestamp);
@@ -479,6 +508,31 @@ export default function StockDetailsPage() {
 
   const fullPrices = chartPoints.map((p: ChartPoint) => p.close);
   const renderPrices = renderChartPoints.map((p: ChartPoint) => p.close);
+  const candleLows = renderChartPoints.map((p: ChartPoint) => p.low);
+  const candleHighs = renderChartPoints.map((p: ChartPoint) => p.high);
+  const candleMin = Math.min(...candleLows);
+  const candleMax = Math.max(...candleHighs);
+  const candlePadding =
+    Number.isFinite(candleMax - candleMin) && candleMax !== candleMin
+      ? (candleMax - candleMin) * 0.08
+      : Math.max(Math.abs(candleMax) * 0.03, 1);
+  const candleBaseMin = candleMin - candlePadding;
+
+  const candleRenderData = renderChartPoints.map((point: ChartPoint) => {
+    const wickLowShifted = point.low - candleBaseMin;
+    const wickRange = Math.max(point.high - point.low, Number.EPSILON);
+    const bodyStart = Math.min(point.open, point.close) - candleBaseMin;
+    const bodySize = Math.max(Math.abs(point.close - point.open), Number.EPSILON);
+    const candleUp = point.close >= point.open;
+    return {
+      ...point,
+      wickOffset: wickLowShifted,
+      wickRange,
+      bodyOffset: bodyStart,
+      bodySize,
+      candleColor: candleUp ? "#34D399" : "#FB7185",
+    };
+  });
 
   if (fullPrices.length === 0 || renderPrices.length === 0)
     return <EmptyState />;
@@ -781,34 +835,91 @@ export default function StockDetailsPage() {
           className="rounded-2xl border border-neutral-800 bg-neutral-950/60 overflow-hidden cursor-crosshair"
           style={{ height: CHART_HEIGHT }}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={renderChartPoints}
-              onMouseMove={handleChartMouseMove}
-              onMouseLeave={handleChartMouseLeave}
-              margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-            >
-              <Tooltip
-                content={
-                  <ChartTooltip selectedRange={range} />
-                }
-                cursor={{
-                  stroke: "#9CA3AF",
-                  strokeWidth: 1,
-                  strokeDasharray: "4 4",
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="close"
-                stroke={chartLineColor}
-                strokeWidth={2.35}
-                dot={false}
-                activeDot={{ r: 4, fill: "#FFFFFF", strokeWidth: 0 }}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {chartMode === "line" ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={renderChartPoints}
+                onMouseMove={handleChartMouseMove}
+                onMouseLeave={handleChartMouseLeave}
+                margin={{ top: 8, right: 10, left: 10, bottom: 4 }}
+              >
+                <YAxis
+                  width={58}
+                  tick={{ fill: "#6B7280", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) =>
+                    formatPrice(Number(value), marketParams)
+                  }
+                />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      selectedRange={range}
+                      market={marketParams}
+                      chartMode={chartMode}
+                    />
+                  }
+                  cursor={{
+                    stroke: "#9CA3AF",
+                    strokeWidth: 1,
+                    strokeDasharray: "4 4",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="close"
+                  stroke={chartLineColor}
+                  strokeWidth={2.35}
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#FFFFFF", strokeWidth: 0 }}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={candleRenderData}
+                onMouseMove={handleChartMouseMove}
+                onMouseLeave={handleChartMouseLeave}
+                margin={{ top: 8, right: 10, left: 10, bottom: 4 }}
+                barCategoryGap="36%"
+              >
+                <YAxis
+                  width={58}
+                  tick={{ fill: "#6B7280", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) =>
+                    formatPrice(Number(value) + candleBaseMin, marketParams)
+                  }
+                />
+                <Tooltip
+                  content={
+                    <ChartTooltip
+                      selectedRange={range}
+                      market={marketParams}
+                      chartMode={chartMode}
+                    />
+                  }
+                  cursor={{
+                    stroke: "#9CA3AF",
+                    strokeWidth: 1,
+                    strokeDasharray: "4 4",
+                  }}
+                />
+                <Bar dataKey="wickOffset" stackId="wick" fill="transparent" isAnimationActive={false} />
+                <Bar dataKey="wickRange" stackId="wick" fill="#6B7280" barSize={2} isAnimationActive={false} />
+                <Bar dataKey="bodyOffset" stackId="body" fill="transparent" isAnimationActive={false} />
+                <Bar dataKey="bodySize" stackId="body" barSize={7} isAnimationActive={false}>
+                  {candleRenderData.map((entry, index) => (
+                    <Cell key={`candle-${entry.timestamp}-${index}`} fill={entry.candleColor} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* ── Range Selector ── */}
@@ -830,6 +941,30 @@ export default function StockDetailsPage() {
                     }`}
                   >
                     {r.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between rounded-2xl border border-neutral-800 bg-neutral-950/80 p-1 gap-1">
+              {[
+                { label: "Line", value: "line" as const },
+                { label: "Candles", value: "candles" as const },
+              ].map((mode) => {
+                const isActive = chartMode === mode.value;
+                return (
+                  <button
+                    key={mode.value}
+                    onClick={() => {
+                      if (!isActive) setChartMode(mode.value);
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-xs tracking-widest transition-all ${
+                      isActive
+                        ? "bg-white text-black font-semibold"
+                        : "text-neutral-400 hover:text-neutral-200"
+                    }`}
+                  >
+                    {mode.label}
                   </button>
                 );
               })}

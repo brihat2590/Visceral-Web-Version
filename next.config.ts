@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  devIndicators:false,
-  images:{
-    domains:["images.unsplash.com","images.pexels.com"]
-  }
-  /* config options here */
+  devIndicators: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**", // allows all domains
+      },
+    ],
+  },
 };
 
 export default nextConfig;
