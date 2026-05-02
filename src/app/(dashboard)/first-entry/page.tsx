@@ -207,7 +207,7 @@ export default function HomeScreen() {
 
       <HoldingsSection
         holdings={data.holdings}
-        onHoldingClick={(symbol) => router.push(`/stock-details/${symbol}`)}
+        onHoldingClick={(symbol, market) => router.push(`/stock-details/${symbol}?market=${market}`)}
       />
     </div>
   );
@@ -326,7 +326,7 @@ function HoldingsSection({
   onHoldingClick,
 }: {
   holdings: any[];
-  onHoldingClick: (symbol: string) => void;
+  onHoldingClick: (symbol: string, market: string) => void;
 }) {
   return (
     <section className="mt-10">
@@ -337,13 +337,16 @@ function HoldingsSection({
         </div>
       ) : (
         <div className="flex flex-col">
-          {holdings.map((holding: any) => (
-            <HoldingRow
-              key={holding.symbol}
-              holding={holding}
-              onClick={() => onHoldingClick(holding.symbol)}
-            />
-          ))}
+          {holdings.map((holding: any) => {
+            const market = typeof holding.region === "string" ? holding.region.toUpperCase() : "US";
+            return (
+              <HoldingRow
+                key={holding.symbol}
+                holding={holding}
+                onClick={() => onHoldingClick(holding.symbol, market)}
+              />
+            );
+          })}
         </div>
       )}
     </section>

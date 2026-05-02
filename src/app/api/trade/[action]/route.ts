@@ -15,7 +15,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ action: string }> }
 ) {
-  const { action } = await params;
+  const resolvedParams = await params;
+  const action = resolvedParams.action;
 
   if (!isTradeAction(action)) {
     return NextResponse.json({ detail: "Unsupported trade action" }, { status: 404 });
