@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Search } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import VisceralLoader from "@/components/Loader"
 
 type AlmanackEntry = {
   key: string;
@@ -143,11 +144,8 @@ export default function AlmanackArchivePage() {
     <div className="flex h-screen items-center justify-center bg-[#060606]">
       <GrainOverlay />
       <div className="flex flex-col items-center gap-6">
-        <div className="relative w-10 h-10">
-          <div className="absolute inset-0 rounded-full border border-white/5" />
-          <div className="absolute inset-0 rounded-full border-t border-white/40 animate-spin" />
-        </div>
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Consulting Archives</p>
+        <VisceralLoader size="lg" />
+        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20 mt-4">Consulting Archives</p>
       </div>
     </div>
   )

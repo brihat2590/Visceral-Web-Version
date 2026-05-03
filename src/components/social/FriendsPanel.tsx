@@ -99,7 +99,7 @@ export default function FriendsPanel() {
     loadSocialData();
   };
 
-  if (loading) return <div className="py-20 flex justify-center"><VisceralLoader /></div>;
+  if (loading) return <div className="min-h-[50vh] flex flex-col items-center justify-center"><VisceralLoader size="lg" /></div>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-700 px-2 sm:px-0">

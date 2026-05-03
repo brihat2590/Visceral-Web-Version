@@ -23,15 +23,33 @@ export default function StockRow({
       className="w-full text-left bg-transparent border-none p-0 cursor-pointer group outline-none"
     >
       <div className="flex flex-row justify-between items-center py-6 bg-black border-b border-neutral-900 group-hover:bg-neutral-900/50 transition-colors">
-        <div>
-          <p className="text-white text-lg font-semibold leading-none">
-            {displaySymbol}
-          </p>
-          {companyName ? (
-            <p className="text-neutral-500 text-xs mt-1">
-              {companyName}
+        <div className="flex flex-row items-center gap-4">
+          <div className="h-12 w-12 rounded-full overflow-hidden shrink-0 bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+            {item.logo_url ? (
+              <img
+                src={item.logo_url}
+                alt={`${displaySymbol} logo`}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <span className="text-white text-xs font-bold leading-none">
+                {displaySymbol.slice(0, 3)}
+              </span>
+            )}
+          </div>
+          <div>
+            <p className="text-white text-lg font-semibold leading-none">
+              {displaySymbol}
             </p>
-          ) : null}
+            {companyName ? (
+              <p className="text-neutral-500 text-xs mt-1 max-w-[140px] md:max-w-[200px] truncate">
+                {companyName}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex flex-col items-end">

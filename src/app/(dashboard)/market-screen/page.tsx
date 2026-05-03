@@ -23,6 +23,8 @@ import { createClient } from "@/lib/supabase/client";
 import { MarketStock } from "@/types/stock";
 import StockRow from "@/components/StockRow";
 import TutorialHighlightTarget from "@/components/tutorial-highlight-target";
+import { getDisplaySymbol } from "@/lib/displaySymbol";
+import VisceralLoader from "@/components/Loader";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -101,6 +103,7 @@ type SearchResult = {
   price: number;
   currency: string;
   marketCap: number;
+  logo_url?:string
 };
 
 // ---------------------------------------------------------------------------
@@ -1646,102 +1649,114 @@ export default function MarketScreen() {
             )}
           </div>
 
-          {/* Dropdown results */}
-          {searchOpen && query.trim() && (
-            <div
-              className="absolute top-full left-0 right-0 mt-2 z-40
-                rounded-2xl border border-neutral-700 bg-[#0f0f0f]
-                shadow-2xl overflow-hidden"
-            >
-              {/* Error state */}
-              {searchError && (
-                <div className="px-4 py-3 text-red-400 text-[13px]">{searchError}</div>
-              )}
-
-              {/* Loading skeleton rows */}
-              {searchLoading && !searchError && (
-                <div className="flex flex-col divide-y divide-neutral-800">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="px-4 py-3 flex items-center gap-3 animate-pulse">
-                      <div className="h-8 w-8 rounded-full bg-neutral-800 shrink-0" />
-                      <div className="flex flex-col gap-1.5 flex-1">
-                        <div className="h-3 w-16 rounded bg-neutral-800" />
-                        <div className="h-2.5 w-24 rounded bg-neutral-800/60" />
-                      </div>
-                      <div className="h-3 w-12 rounded bg-neutral-800" />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Results list */}
-              {!searchLoading && !searchError && results.length > 0 && (
-                <ul className="divide-y divide-neutral-800/60 max-h-72 overflow-y-auto">
-                  {results.map((result) => (
-                    <li key={`${result.market}:${result.symbol}`}>
-                      <button
-                        onClick={() => handleSearchResultClick(result)}
-                        className="w-full px-4 py-3 flex items-center gap-3
-                          hover:bg-neutral-800/60 active:bg-neutral-700/60
-                          transition-colors duration-100 text-left"
-                      >
-                        {/* Symbol badge */}
-                        <div
-                          className="h-9 w-9 rounded-full bg-neutral-800 border border-neutral-700
-                            flex items-center justify-center shrink-0"
-                        >
-                          <span className="text-white text-[10px] font-bold leading-none">
-                            {result.symbol.slice(0, 3)}
-                          </span>
-                        </div>
-
-                        {/* Symbol + market */}
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className="text-white text-[13px] font-semibold tracking-wide">
-                            {result.symbol}
-                          </span>
-                          <span className="text-neutral-500 text-[11px] truncate">
-                            {getMarketDisplayLabel(result.market)} · {result.currency}
-                          </span>
-                        </div>
-
-                        {/* Price + market cap */}
-                        <div className="flex flex-col items-end shrink-0">
-                          <span className="text-white text-[13px] font-semibold tabular-nums">
-                            {formatPrice(result.price, result.currency)}
-                          </span>
-                          {result.marketCap > 0 && (
-                            <span className="text-neutral-500 text-[10px] tabular-nums">
-                              {formatMarketCap(result.marketCap)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Chevron */}
-                        <ChevronRightIcon />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Empty state */}
-              {!searchLoading && !searchError && results.length === 0 && (
-                <div className="px-4 py-5 flex flex-col items-center gap-1">
-                  <span className="text-neutral-400 text-[13px] font-medium">No results found</span>
-                  <span className="text-neutral-600 text-[11px]">
-                    Try a different ticker or company name
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
+          {/* We do NOT place the absolute dropdown here anymore. It's now rendered inline below. */}
         </div>
       </TutorialHighlightTarget>
 
+      {/* ── Search Results Inline ────────────────────────────────────────── */}
+      {searchOpen && query.trim() ? (
+        <div className="flex flex-col flex-1 mt-3 overflow-y-auto w-full pb-28">
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-900 overflow-hidden">
+            {/* Error state */}
+            {searchError && (
+              <div className="px-4 py-3 text-red-400 text-[13px]">{searchError}</div>
+            )}
+
+            {/* Loading skeleton rows */}
+            {searchLoading && !searchError && (
+              <div className="flex flex-col divide-y divide-neutral-800/60">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="px-4 py-4 flex items-center gap-3 animate-pulse">
+                    <div className="h-10 w-10 rounded-full bg-neutral-800 shrink-0" />
+                    <div className="flex flex-col gap-1.5 flex-1">
+                      <div className="h-3.5 w-20 rounded bg-neutral-800" />
+                      <div className="h-2.5 w-32 rounded bg-neutral-800/60" />
+                    </div>
+                    <div className="h-4 w-14 rounded bg-neutral-800" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Results list */}
+            {!searchLoading && !searchError && results.length > 0 && (
+              <ul className="divide-y divide-neutral-800/60">
+                {results.map((result) => (
+                  <li key={`${result.market}:${result.symbol}`}>
+                    <button
+                      onClick={() => handleSearchResultClick(result)}
+                      className="w-full px-4 py-4 flex items-center gap-3
+                        hover:bg-neutral-800/60 active:bg-neutral-700/60
+                        transition-colors duration-100 text-left"
+                    >
+                      {/* Symbol badge */}
+                      <div
+                        className="h-10 w-10 rounded-full bg-neutral-800 border border-neutral-700
+                          flex items-center justify-center shrink-0 overflow-hidden"
+                      >
+                        
+                        {result.logo_url ? (
+                          <img
+                            src={result.logo_url}
+                            alt={`${result.symbol} logo`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <span className="text-white text-[11px] font-bold leading-none">
+                            {getDisplaySymbol(result.symbol, result.market).slice(0, 3)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Symbol + market */}
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-white text-[14px] font-semibold tracking-wide">
+                          {getDisplaySymbol(result.symbol, result.market)}
+                        </span>
+                        <span className="text-neutral-500 text-[12px] truncate">
+                          {getMarketDisplayLabel(result.market)} · {result.currency}
+                        </span>
+                      </div>
+
+                      {/* Price + market cap */}
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-white text-[14px] font-semibold tabular-nums">
+                          {formatPrice(result.price, result.currency)}
+                        </span>
+                        {result.marketCap > 0 && (
+                          <span className="text-neutral-500 text-[11px] tabular-nums">
+                            {formatMarketCap(result.marketCap)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Chevron */}
+                      <ChevronRightIcon />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Empty state */}
+            {!searchLoading && !searchError && results.length === 0 && (
+              <div className="px-4 py-8 flex flex-col items-center gap-2">
+                <span className="text-neutral-400 text-[15px] font-medium">No results found</span>
+                <span className="text-neutral-600 text-[13px] text-center max-w-[200px]">
+                  Try a different ticker or company name
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       {/* ── Market status pills ──────────────────────────────────────────── */}
       <TutorialHighlightTarget targetId="markets.active_market_pills">
-        {shouldRenderMarketBoard && marketPills.length > 0 ? (
+        {(!searchOpen || !query.trim()) && shouldRenderMarketBoard && marketPills.length > 0 ? (
           <div className="mt-3 flex flex-row flex-wrap">
             {marketPills.map((pill) => {
               const isActive = isActiveMarketPhase(pill.status.phase);
@@ -1776,13 +1791,13 @@ export default function MarketScreen() {
               );
             })}
           </div>
-        ) : (
+        ) : (!searchOpen || !query.trim()) ? (
           <div className="mt-3 h-2" />
-        )}
+        ) : null}
       </TutorialHighlightTarget>
 
       {/* ── Main board ───────────────────────────────────────────────────── */}
-      {shouldRenderMarketBoard ? (
+      {(!searchOpen || !query.trim()) && shouldRenderMarketBoard ? (
         <div className="flex flex-col flex-1 overflow-y-auto pb-28">
           <div className="flex justify-end mt-1">
             <button
@@ -1869,17 +1884,9 @@ export default function MarketScreen() {
           )}
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2">
-          <svg
-            className="animate-spin h-6 w-6 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          <span className="text-neutral-500 text-[13px]">Loading market board…</span>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 h-[60vh]">
+          <VisceralLoader size="lg" />
+          <span className="text-neutral-500 text-[13px] mt-4">Loading market board…</span>
         </div>
       )}
 

@@ -1,0 +1,201 @@
+1601:      <TutorialHighlightTarget targetId="markets.search_bar">
+1602-        <div ref={searchContainerRef} className="mt-4 relative">
+1603-          {/* Input row */}
+1604-          <div
+1605-            className={`rounded-full border bg-neutral-900/80 px-5 py-3 flex flex-row items-center gap-2
+1606-              transition-colors duration-150
+1607-              ${query ? "border-neutral-600" : "border-neutral-800 hover:border-neutral-700"}`}
+1608-          >
+1609-            {searchLoading ? (
+1610-              /* mini spinner while loading */
+1611-              <svg
+1612-                className="animate-spin h-4 w-4 text-neutral-400 shrink-0"
+1613-                xmlns="http://www.w3.org/2000/svg"
+1614-                fill="none"
+1615-                viewBox="0 0 24 24"
+1616-              >
+1617-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+1618-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+1619-              </svg>
+1620-            ) : (
+1621-              <SearchIcon />
+1622-            )}
+1623-
+1624-            <input
+1625-              ref={searchInputRef}
+1626-              type="text"
+1627-              value={query}
+1628-              onChange={(e) => setQuery(e.target.value)}
+1629-              onFocus={() => { if (query.trim()) setSearchOpen(true); }}
+1630-              placeholder="Search by ticker or company name…"
+1631-              className="flex-1 bg-transparent text-neutral-200 text-[14px] placeholder:text-neutral-500
+1632-                outline-none border-none caret-white"
+1633-              autoComplete="off"
+1634-              spellCheck={false}
+1635-            />
+1636-
+1637-            {/* Clear button */}
+1638-            {query && (
+1639-              <button
+1640-                onClick={() => { clearSearch(); searchInputRef.current?.focus(); }}
+1641-                className="shrink-0 text-neutral-500 hover:text-neutral-300 transition-colors duration-100"
+1642-                aria-label="Clear search"
+1643-              >
+1644-                <XIcon />
+1645-              </button>
+1646-            )}
+1647-          </div>
+1648-
+1649-          {/* Dropdown results */}
+1650-          {searchOpen && query.trim() && (
+1651-            <div
+1652-              className="absolute top-full left-0 right-0 mt-2 z-40
+1653-                rounded-2xl border border-neutral-700 bg-[#0f0f0f]
+1654-                shadow-2xl overflow-hidden"
+1655-            >
+1656-              {/* Error state */}
+1657-              {searchError && (
+1658-                <div className="px-4 py-3 text-red-400 text-[13px]">{searchError}</div>
+1659-              )}
+1660-
+1661-              {/* Loading skeleton rows */}
+1662-              {searchLoading && !searchError && (
+1663-                <div className="flex flex-col divide-y divide-neutral-800">
+1664-                  {[0, 1, 2].map((i) => (
+1665-                    <div key={i} className="px-4 py-3 flex items-center gap-3 animate-pulse">
+1666-                      <div className="h-8 w-8 rounded-full bg-neutral-800 shrink-0" />
+1667-                      <div className="flex flex-col gap-1.5 flex-1">
+1668-                        <div className="h-3 w-16 rounded bg-neutral-800" />
+1669-                        <div className="h-2.5 w-24 rounded bg-neutral-800/60" />
+1670-                      </div>
+1671-                      <div className="h-3 w-12 rounded bg-neutral-800" />
+1672-                    </div>
+1673-                  ))}
+1674-                </div>
+1675-              )}
+1676-
+1677-              {/* Results list */}
+1678-              {!searchLoading && !searchError && results.length > 0 && (
+1679-                <ul className="divide-y divide-neutral-800/60 max-h-72 overflow-y-auto">
+1680-                  {results.map((result) => (
+1681-                    <li key={`${result.market}:${result.symbol}`}>
+1682-                      <button
+1683-                        onClick={() => handleSearchResultClick(result)}
+1684-                        className="w-full px-4 py-3 flex items-center gap-3
+1685-                          hover:bg-neutral-800/60 active:bg-neutral-700/60
+1686-                          transition-colors duration-100 text-left"
+1687-                      >
+1688-                        {/* Symbol badge */}
+1689-                        <div
+1690-                          className="h-9 w-9 rounded-full bg-neutral-800 border border-neutral-700
+1691-                            flex items-center justify-center shrink-0"
+1692-                        >
+1693-                          <span className="text-white text-[10px] font-bold leading-none">
+1694-                            {result.symbol.slice(0, 3)}
+1695-                          </span>
+1696-                        </div>
+1697-
+1698-                        {/* Symbol + market */}
+1699-                        <div className="flex flex-col flex-1 min-w-0">
+1700-                          <span className="text-white text-[13px] font-semibold tracking-wide">
+1701-                            {result.symbol}
+1702-                          </span>
+1703-                          <span className="text-neutral-500 text-[11px] truncate">
+1704-                            {getMarketDisplayLabel(result.market)} · {result.currency}
+1705-                          </span>
+1706-                        </div>
+1707-
+1708-                        {/* Price + market cap */}
+1709-                        <div className="flex flex-col items-end shrink-0">
+1710-                          <span className="text-white text-[13px] font-semibold tabular-nums">
+1711-                            {formatPrice(result.price, result.currency)}
+1712-                          </span>
+1713-                          {result.marketCap > 0 && (
+1714-                            <span className="text-neutral-500 text-[10px] tabular-nums">
+1715-                              {formatMarketCap(result.marketCap)}
+1716-                            </span>
+1717-                          )}
+1718-                        </div>
+1719-
+1720-                        {/* Chevron */}
+1721-                        <ChevronRightIcon />
+1722-                      </button>
+1723-                    </li>
+1724-                  ))}
+1725-                </ul>
+1726-              )}
+1727-
+1728-              {/* Empty state */}
+1729-              {!searchLoading && !searchError && results.length === 0 && (
+1730-                <div className="px-4 py-5 flex flex-col items-center gap-1">
+1731-                  <span className="text-neutral-400 text-[13px] font-medium">No results found</span>
+1732-                  <span className="text-neutral-600 text-[11px]">
+1733-                    Try a different ticker or company name
+1734-                  </span>
+1735-                </div>
+1736-              )}
+1737-            </div>
+1738-          )}
+1739-        </div>
+1740-      </TutorialHighlightTarget>
+1741-
+1742-      {/* ── Market status pills ──────────────────────────────────────────── */}
+1743-      <TutorialHighlightTarget targetId="markets.active_market_pills">
+1744-        {shouldRenderMarketBoard && marketPills.length > 0 ? (
+1745-          <div className="mt-3 flex flex-row flex-wrap">
+1746-            {marketPills.map((pill) => {
+1747-              const isActive = isActiveMarketPhase(pill.status.phase);
+1748-              const isPre = pill.status.phase === "PRE";
+1749-              const containerCn = isActive
+1750-                ? "mr-2 mb-2 rounded-full border border-emerald-500/45 bg-emerald-500/15 px-2.5 py-1 flex flex-row items-center"
+1751-                : isPre
+1752-                ? "mr-2 mb-2 rounded-full border border-amber-500/45 bg-amber-500/15 px-2.5 py-1 flex flex-row items-center"
+1753-                : "mr-2 mb-2 rounded-full border border-neutral-700 bg-neutral-900 px-2.5 py-1 flex flex-row items-center";
+1754-              const dotCn = isActive
+1755-                ? "h-1.5 w-1.5 rounded-full bg-emerald-300 mr-1.5 shrink-0"
+1756-                : isPre
+1757-                ? "h-1.5 w-1.5 rounded-full bg-amber-300 mr-1.5 shrink-0"
+1758-                : "h-1.5 w-1.5 rounded-full bg-neutral-400 mr-1.5 shrink-0";
+1759-              const labelCn = isActive
+1760-                ? "text-emerald-100 text-[10px] font-semibold tracking-[0.2px]"
+1761-                : isPre
+1762-                ? "text-amber-100 text-[10px] font-semibold tracking-[0.2px]"
+1763-                : "text-neutral-200 text-[10px] font-semibold tracking-[0.2px]";
+1764-              const phaseCn = isActive
+1765-                ? "ml-1 text-[9px] font-semibold text-emerald-200"
+1766-                : isPre
+1767-                ? "ml-1 text-[9px] font-semibold text-amber-200"
+1768-                : "ml-1 text-[9px] font-semibold text-neutral-400";
+1769-
+1770-              return (
+1771-                <div key={`market-pill-${pill.code}`} className={containerCn}>
+1772-                  <div className={dotCn} />
+1773-                  <span className={labelCn}>{pill.label}</span>
+1774-                  <span className={phaseCn}>{getPhasePillText(pill.status.phase)}</span>
+1775-                </div>
+1776-              );
+1777-            })}
+1778-          </div>
+1779-        ) : (
+1780-          <div className="mt-3 h-2" />
+1781-        )}
+1782-      </TutorialHighlightTarget>
+1783-
+1784-      {/* ── Main board ───────────────────────────────────────────────────── */}
+1785-      {shouldRenderMarketBoard ? (
+1786-        <div className="flex flex-col flex-1 overflow-y-auto pb-28">
+1787-          <div className="flex justify-end mt-1">
+1788-            <button
+1789-              onClick={() => void handleManualRefresh()}
+1790-              disabled={!manualRefreshReady || manualRefreshing}
+1791-              className="text-neutral-400 text-[11px] px-3 py-1.5 rounded-full border
+1792-                border-neutral-700 transition-all duration-100 active:scale-95
+1793-                hover:border-neutral-500 disabled:opacity-40 disabled:cursor-not-allowed"
+1794-            >
+1795-              {manualRefreshing ? "Refreshing…" : "↻ Refresh"}
+1796-            </button>
+1797-          </div>
+1798-
+1799-          {stockSections.length > 0 ? (
+1800-            <>
+1801-              <div className="mt-2 flex flex-row flex-wrap">
