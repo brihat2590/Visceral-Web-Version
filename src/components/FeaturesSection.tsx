@@ -5,7 +5,7 @@ export function VisceralFeaturesSection() {
   return (
     <section className="bg-black px-6 py-24 lg:px-8">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="flex min-h-[480px] flex-col justify-between border border-white/10 bg-black p-10 lg:p-14">
+        <div className="flex min-h-[480px] flex-col justify-between border border-white bg-black p-10 lg:p-14">
           <div>
             <h2 className="mb-8 text-5xl font-black uppercase leading-none tracking-tight text-white lg:text-6xl" style={{ fontFamily: "'Bebas Neue', 'Arial Black', sans-serif" }}>
               WHY VISCERAL
@@ -48,7 +48,7 @@ export function VisceralFeaturesSection() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-sm border border-white/10 bg-black p-10">
+          <div className="rounded-sm border border-white bg-black p-10">
             <p className="mb-2 text-lg font-semibold leading-snug text-white">
               Trade without fear
             </p>
@@ -64,7 +64,7 @@ export function VisceralFeaturesSection() {
             </p>
           </div>
 
-          <div className="rounded-sm border border-white/10 bg-black p-10">
+          <div className="rounded-sm border border-white bg-black p-10">
             <p className="mb-2 text-lg font-semibold leading-snug text-white">
               Compete to stay consistent
             </p>
@@ -77,7 +77,7 @@ export function VisceralFeaturesSection() {
             </a>
           </div>
 
-          <div className="rounded-sm border border-white/10 bg-black p-10">
+          <div className="rounded-sm border border-white bg-black p-10">
             <p className="mb-2 text-lg font-semibold leading-snug text-white">
               Our mission
             </p>

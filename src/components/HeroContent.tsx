@@ -46,8 +46,8 @@ export default function HeroContent() {
 
       <div className="group relative mt-24 w-full">
         <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-2/3 -translate-x-1/2 rounded-full bg-white/5 blur-[120px]" />
-        <div className="relative rounded-2xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl overflow-hidden backdrop-blur-sm">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-900 bg-zinc-900/30">
+        <div className="relative rounded-2xl bg-zinc-950 p-2 shadow-2xl overflow-hidden backdrop-blur-sm">
+          <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/30">
             <div className="flex gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
               <div className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
@@ -64,9 +64,9 @@ export default function HeroContent() {
             <div className="absolute inset-0 z-10 flex items-center justify-center font-mono text-xs uppercase tracking-[0.5em] text-zinc-800 pointer-events-none">
               [ Dashboard Intelligence Preview ]
             </div>
-            <div className="absolute top-0 left-0 z-20 h-[2px] w-full bg-white/10 animate-[scan_4s_linear_infinite]" />
+            <div className="absolute top-0 left-0 w-full bg-white/10 " />
             <img
-              src="https://images.pexels.com/photos/6770610/pexels-photo-6770610.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+              src="https://4kwallpapers.com/images/walls/thumbs_3t/13776.png"
               alt="Dashboard Preview"
               className="w-full h-full object-cover grayscale contrast-125 opacity-40 group-hover:opacity-60 transition-opacity duration-700"
             />
