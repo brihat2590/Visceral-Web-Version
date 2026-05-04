@@ -3,6 +3,12 @@ import Navbar from "@/components/LandingNav";
 import  { VisceralFeaturesSection } from "@/components/FeaturesSection"
 import { HowItWorksSection } from "@/components/HowItWorks";
 
+export const metadata = {
+  title: "Paper Trading Platform",
+  description:
+    "Learn trading with live market simulation, reflection tools, and competitive leagues in the Visceral paper trading platform.",
+};
+
 export default function VisceralLanding() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-black">
