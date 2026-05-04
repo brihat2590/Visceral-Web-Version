@@ -1,6 +1,6 @@
 # Visceral Web
 
-Visceral is a Next.js app for a trading education and paper-trading experience. The landing page presents the product with a monochrome SaaS-style layout, while the rest of the app contains auth, dashboard, and product flows.
+Visceral is a modern web platform for trading education and paper trading, empowering users to learn, practice, and improve their trading performance without risk.It provides a simulated trading environment that mirrors real market conditions, allowing users to test strategies and gain hands-on experience without financial exposure. The platform focuses on building strong fundamentals, helping users understand market behavior, risk management, and disciplined decision-making.
 
 ## Tech Stack
 
