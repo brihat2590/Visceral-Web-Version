@@ -18,15 +18,12 @@ const navLinks = [
 export default function Footer() {
   return (
     <footer className="relative bg-[#0a0a0a] overflow-hidden w-full">
-      {/* Top Section */}
-      <div className="relative z-10 flex flex-col md:flex-row  md:items-start justify-between px-14 pt-12 pb-10 gap-10 md:gap-10">
-        {/* Logo */}
-        <div className="text-white text-xl font-black tracking-tight">
-          <img src={"/visceral_logo.jpg"} alt="Visceral Logo" className="h-10 w-auto" />
+      <div className="relative z-10 flex flex-col justify-between gap-10 px-14 pb-10 pt-12 md:flex-row md:items-start md:gap-10">
+        <div className="text-xl font-black tracking-tight text-white">
+          <div className="inline-block bg-white px-2 py-1 italic text-black">VISCERAL</div>
         </div>
 
-        {/* Nav Links */}
-        <nav className="flex flex-col   md:items-start   gap-3.5">
+        <nav className="flex flex-col gap-3.5 md:items-start">
           {navLinks.map((link) => (
             <a
               key={link.label}
@@ -38,7 +35,6 @@ export default function Footer() {
           ))}
         </nav>
 
-        {/* Right: Social Icons + Copyright */}
         <div className="flex flex-col md:items-end gap-4">
           <div className="flex gap-2.5">
             {socialLinks.map((social) => (
@@ -46,7 +42,7 @@ export default function Footer() {
                 key={social.label}
                 href={social.href}
                 aria-label={social.label}
-                className="w-11 h-11 rounded-xl bg-[#1a1a1a]   text-[#cccccc] flex items-center justify-center hover:bg-[#252525] hover:border-[#ffffff]hover:text-[#ffffff] transition-all duration-200"
+                className="w-11 h-11 rounded-xl bg-[#1a1a1a] text-[#cccccc] flex items-center justify-center transition-all duration-200 hover:bg-[#252525] hover:text-[#ffffff]"
               >
                 {social.icon}
               </a>
@@ -58,17 +54,9 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Watermark */}
-      <div
-        className="relative  w-full z-0  leading-none select-none pointer-events-none  "
-        aria-hidden="true"
-      >
+      <div className="relative z-0 w-full select-none leading-none pointer-events-none" aria-hidden="true">
         <span
-          className="font-black flex items-center justify-center bg-gradient-to-b from-neutral-300 via-neutral-700 to-black bg-clip-text text-transparent  tracking-tighter text-[70px] md:text-[clamp(140px,18vw,300px)] "
-        //   style={{
-        //     fontSize: "clamp(140px, 18vw, 300px)",
-            
-        //   }}
+          className="flex items-center justify-center bg-gradient-to-b from-neutral-300 via-neutral-700 to-black bg-clip-text text-[70px] font-black tracking-tighter text-transparent md:text-[clamp(140px,18vw,300px)]"
         >
           VISCERAL
         </span>

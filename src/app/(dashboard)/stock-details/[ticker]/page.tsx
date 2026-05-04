@@ -23,7 +23,6 @@ import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import VisceralLoader from "@/components/Loader";
 import {
   LineChart,
   Line,
@@ -460,8 +459,8 @@ export default function StockDetailsPage() {
   // ── Loading / empty states ──────────────────────────────
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] w-full items-center justify-center bg-black">
-        <VisceralLoader size="lg" />
+      <div className="flex h-screen w-full items-center justify-center bg-black">
+        <Loader2 className="animate-spin text-white" size={32} />
       </div>
     );
   }

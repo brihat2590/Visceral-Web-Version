@@ -47,9 +47,8 @@ export function HowItWorksSection() {
 
   return (
     <section className="relative bg-black py-24 lg:py-40 overflow-hidden">
-      {/* Subtle grid */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.025]"
+        className="pointer-events-none absolute inset-0 opacity-[0.025] grid-pattern"
         style={{
           backgroundImage:
             "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)",
@@ -57,29 +56,14 @@ export function HowItWorksSection() {
         }}
       />
 
-      {/* Header */}
       <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 mb-14 text-center">
-        {/* <p className="text-[10px] uppercase tracking-[0.4em] text-white/25 font-mono mb-4">
-          The Process
-        </p> */}
-
-<div className="flex flex-col items-center gap-1 group cursor-default">
-  {/* The Text: High tracking, bold, and italic for that aggressive look */}
-  <div className="text-[11px] font-black italic tracking-[1.2em] text-white uppercase ml-[1.2em]">
-    The Process
-  </div>
-  
-  {/* The Accent: A sharp red bar that matches your brand image */}
-  <div className="relative">
-    <div className="h-[2px] w-8 bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] transition-all duration-500 group-hover:w-12" />
-    {/* Subtle glow layer */}
-    <div className="absolute inset-0 bg-red-600 blur-[4px] opacity-40" />
-  </div>
-</div>
-        <h2
-          className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-none"
-        //   style={{ fontFamily: "'Bebas Neue', 'Arial Black', sans-serif" }}
-        >
+        <div className="group mb-4 flex cursor-default flex-col items-center gap-1">
+          <div className="ml-[1.2em] text-[11px] font-black italic uppercase tracking-[1.2em] text-white">The Process</div>
+          <div className="relative">
+            <div className="h-[2px] w-8 bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] transition-all duration-500 group-hover:w-12" />
+          </div>
+        </div>
+        <h2 className="text-5xl font-black leading-none tracking-tighter text-white lg:text-7xl">
           HOW IT WORKS
         </h2>
         <p className="mt-4 text-sm text-white/35 font-mono max-w-md mx-auto leading-relaxed">
@@ -87,7 +71,6 @@ export function HowItWorksSection() {
         </p>
       </div>
 
-      {/* Tab Switcher */}
       <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 mb-10">
         <div className="flex justify-center">
           <div className="inline-flex border border-white/10 rounded-sm p-1 gap-1 bg-white/[0.02]">
@@ -119,7 +102,6 @@ export function HowItWorksSection() {
         </div>
       </div>
 
-      {/* Content Panel */}
       <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8">
         <div className="border border-white/10 rounded-sm overflow-hidden bg-white/[0.01]">
           <AnimatePresence mode="wait">
@@ -131,7 +113,6 @@ export function HowItWorksSection() {
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               className="grid grid-cols-1 lg:grid-cols-2 min-h-[520px]"
             >
-              {/* Left: Text */}
               <div className="flex flex-col justify-between p-10 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/10">
                 <div>
                   <div className="flex items-center gap-3 mb-8">
@@ -140,10 +121,7 @@ export function HowItWorksSection() {
                     </span>
                   </div>
 
-                  <h3
-                    className="text-4xl lg:text-6xl font-black text-white leading-tight tracking-tighter whitespace-pre-line mb-6"
-                    // style={{ fontFamily: "'Bebas Neue', 'Arial Black', sans-serif" }}
-                  >
+                  <h3 className="text-4xl lg:text-6xl font-black text-white leading-tight tracking-tighter whitespace-pre-line mb-6">
                     {steps[active].headline}
                   </h3>
 
@@ -152,7 +130,6 @@ export function HowItWorksSection() {
                   </p>
                 </div>
 
-                {/* Tags + Step indicators */}
                 <div className="mt-10 space-y-6">
                   <div className="flex flex-wrap gap-2">
                     {steps[active].tags.map((tag) => (
@@ -165,7 +142,6 @@ export function HowItWorksSection() {
                     ))}
                   </div>
 
-                  {/* Progress dots */}
                   <div className="flex items-center gap-3">
                     {steps.map((_, i) => (
                       <button
@@ -183,9 +159,7 @@ export function HowItWorksSection() {
                 </div>
               </div>
 
-              {/* Right: Visual */}
               <div className="relative flex items-center justify-center p-8 lg:p-10 bg-white/[0.01] overflow-hidden">
-                {/* Corner marks */}
                 <div className="absolute top-4 left-4 w-6 h-6 border-t border-l border-white/15" />
                 <div className="absolute top-4 right-4 w-6 h-6 border-t border-r border-white/15" />
                 <div className="absolute bottom-4 left-4 w-6 h-6 border-b border-l border-white/15" />
