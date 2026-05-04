@@ -145,8 +145,8 @@ export default function SocialPage() {
               )}
 
               {loading ? (
-                <div className="min-h-[50vh] flex flex-col items-center justify-center">
-                  <VisceralLoader size="lg" />
+                <div className="py-20 flex justify-center">
+                  <VisceralLoader />
                 </div>
               ) : posts.length === 0 ? (
                 <p className="text-[10px] text-zinc-800 uppercase tracking-widest text-center py-20 border border-dashed border-zinc-900">

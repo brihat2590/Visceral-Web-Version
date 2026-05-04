@@ -43,7 +43,7 @@ export default function TradeHistoryPage() {
   )
 
   if (loading) return (
-    <div className="flex min-h-[50vh] w-full items-center justify-center bg-black">
+    <div className="flex h-screen items-center justify-center bg-black">
       <VisceralLoader size="lg" />
     </div>
   )

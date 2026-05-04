@@ -62,7 +62,7 @@ export default function SettingsPage() {
   }
 
   if (loading) return (
-    <div className="flex min-h-[50vh] items-center justify-center w-full">
+    <div className="flex h-full items-center justify-center">
       <VisceralLoader size="lg" />
     </div>
   )
