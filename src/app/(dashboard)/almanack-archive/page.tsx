@@ -15,7 +15,7 @@ type AlmanackEntry = {
 // ─── Grain overlay for texture ───────────────────────────────────────────────
 function GrainOverlay() {
   return (
-    <svg className="pointer-events-none fixed inset-0 z-50 opacity-[0.025] mix-blend-screen" aria-hidden>
+    <svg className="pointer-events-none fixed inset-0 z-50 opacity-[0.01] mix-blend-screen" aria-hidden>
       <filter id="noise">
         <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch" />
         <feColorMatrix type="saturate" values="0" />
@@ -28,7 +28,8 @@ function GrainOverlay() {
 // ─── Individual archive card ──────────────────────────────────────────────────
 function ArchiveCard({ entry, index }: { entry: AlmanackEntry; index: number }) {
   const score = entry.intuitionScore ?? 0
-  const accentColor = score > 70 ? "#4ade80" : score > 40 ? "#facc15" : "#f87171"
+  const accentColor = "#ffffff"
+  const formattedAnalysis = entry.analysis.replace(/\s+(?=\d+\.\s)/g, "\n")
 
   const formattedDate = new Date(entry.marketDate).toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric",
@@ -42,32 +43,32 @@ function ArchiveCard({ entry, index }: { entry: AlmanackEntry; index: number }) 
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="group py-10 border-t border-white/[0.06] hover:border-white/[0.12] transition-colors duration-500"
+      className="group px-0 py-8 transition-opacity duration-200 sm:py-9"
     >
-      <div className="flex items-start justify-between gap-10">
+      <div className="flex items-start justify-between gap-6 border-t border-white/[0.06] pt-8 first:border-t-0 first:pt-0">
 
         {/* Left: text content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pl-2 sm:pl-4">
           {/* Meta row */}
-          <div className="flex items-center gap-4 mb-5">
+          <div className="mb-5 flex items-center gap-4">
             <span className="text-[9px] font-black uppercase tracking-[0.4em]" style={{ color: accentColor }}>
               {entryNum}
             </span>
-            <span className="text-white/70 text-[12px] font-medium uppercase tracking-[0.2em]">{formattedDate}</span>
+            <span className="text-[12px] font-medium uppercase tracking-[0.22em] text-white/42">{formattedDate}</span>
           </div>
 
           {/* Analysis */}
-          <p className="text-white/70 text-xl md:text-xl leading-[1.6]  tracking-tight group-hover:text-white/85 transition-colors duration-500">
-            {entry.analysis}
+          <p className="max-w-[78ch] whitespace-pre-line text-[17px] leading-[1.9] tracking-[-0.01em] text-white/72 transition-colors duration-200 group-hover:text-white/88 md:text-[18px]">
+            {formattedAnalysis}
           </p>
         </div>
 
         {/* Right: score */}
         {entry.intuitionScore !== null && (
-          <div className="flex-none flex flex-col items-end gap-1 pt-1">
-            <h1 className="p-2 text-white/70 text-[12px] font-medium uppercase tracking-[0.2em">Intuition Score</h1>
+          <div className="flex-none flex flex-col items-end gap-2 pt-1">
+            <h1 className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">Score</h1>
             <motion.span
-              className="text-5xl font-black tracking-tighter tabular-nums"
+              className="text-4xl font-black leading-none tracking-[-0.08em] tabular-nums sm:text-5xl"
               style={{ color: accentColor }}
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -76,9 +77,9 @@ function ArchiveCard({ entry, index }: { entry: AlmanackEntry; index: number }) 
             >
               {score}
             </motion.span>
-            <div className="w-10 h-[2px] rounded-full overflow-hidden bg-white/[0.06]">
+            <div className="h-px w-12 overflow-hidden bg-white/[0.08]">
               <motion.div
-                className="h-full rounded-full"
+                className="h-full"
                 style={{ background: accentColor }}
                 initial={{ width: 0 }}
                 whileInView={{ width: `${score}%` }}
@@ -140,45 +141,34 @@ export default function AlmanackArchivePage() {
 
   // ─── Loading ────────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-[#060606]">
+    <div className="flex h-screen items-center justify-center bg-black">
       <GrainOverlay />
       <div className="flex flex-col items-center gap-6">
         <div className="relative w-10 h-10">
           <div className="absolute inset-0 rounded-full border border-white/5" />
           <div className="absolute inset-0 rounded-full border-t border-white/40 animate-spin" />
         </div>
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20">Consulting Archives</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/20">Consulting Archives</p>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white selection:bg-white selection:text-black">
+    <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black">
       <GrainOverlay />
 
-      {/* Ambient top glow */}
-      <div
-        className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] pointer-events-none"
-        style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.025) 0%, transparent 70%)" }}
-      />
-
       {/* ── Header ── */}
-      <header className="max-w-5xl mx-auto px-8 pt-20 pb-4">
+      <header className="mx-auto max-w-6xl px-5 pb-4 pt-8 sm:px-6 lg:px-8 lg:pt-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-end justify-between gap-8 mb-16"
+          className="mb-8 flex flex-col gap-6 lg:mb-10 lg:flex-row lg:items-end lg:justify-between"
         >
           {/* Title */}
-          <div>
+          <div className="max-w-2xl">
             <h1
-              className="font-black leading-none tracking-[-0.05em] text-[clamp(60px,10vw,100px)]"
-              style={{
-                background: "linear-gradient(160deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.3) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
+              className="text-[clamp(56px,9vw,92px)] font-black leading-none  text-white"
             >
               Almanack
             </h1>
@@ -187,15 +177,15 @@ export default function AlmanackArchivePage() {
           {/* Inline stats + search */}
           <div className="flex items-center gap-8 pb-2">
             {entries.length > 0 && (
-              <div className="hidden md:flex items-center gap-6">
+              <div className="hidden items-center gap-6 md:flex">
                 <div className="text-right">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20">Entries</p>
-                  <p className="text-2xl font-black tracking-tighter text-white/60">{entries.length.toString().padStart(3, "0")}</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-white/18">Entries</p>
+                  <p className="text-2xl font-black leading-none tracking-[-0.07em] text-white/78">{entries.length.toString().padStart(3, "0")}</p>
                 </div>
                 {avgScore !== null && (
                   <div className="text-right">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20">Avg Score</p>
-                    <p className="text-2xl font-black tracking-tighter text-white/60">{Math.round(avgScore)}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-white/18">Avg Score</p>
+                    <p className="text-2xl font-black leading-none tracking-[-0.07em] text-white/78">{Math.round(avgScore)}</p>
                   </div>
                 )}
               </div>
@@ -208,12 +198,12 @@ export default function AlmanackArchivePage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="relative mb-2"
+          className="relative mb-2 px-0 py-3"
         >
           <Search
             size={14}
             className="absolute left-0 top-1/2 -translate-y-1/2 transition-colors"
-            style={{ color: focused ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)" }}
+            style={{ color: focused ? "rgba(247,248,248,0.45)" : "rgba(247,248,248,0.18)" }}
           />
           <input
             type="text"
@@ -222,8 +212,7 @@ export default function AlmanackArchivePage() {
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent pl-6 pr-8 py-2 text-sm text-white/60 placeholder:text-white/15 outline-none border-b transition-all duration-200"
-            style={{ borderColor: focused ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)" }}
+            className="w-full bg-transparent pl-5 pr-8 py-1.5 text-[15px] font-medium tracking-[-0.02em] text-white/76 placeholder:text-white/15 outline-none transition-all duration-200"
           />
           <AnimatePresence>
             {searchTerm && (
@@ -232,7 +221,7 @@ export default function AlmanackArchivePage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setSearchTerm("")}
-                className="absolute right-0 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors text-lg leading-none"
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-lg leading-none text-white/20 transition-colors hover:text-white/45"
               >
                 ×
               </motion.button>
@@ -242,7 +231,7 @@ export default function AlmanackArchivePage() {
       </header>
 
       {/* ── Entries ── */}
-      <main className="max-w-5xl mx-auto px-8 pb-32">
+      <main className="mx-auto max-w-6xl px-5 pb-28 sm:px-6 lg:px-8">
         <AnimatePresence mode="wait">
           {filteredEntries.length > 0 ? (
             <motion.div
@@ -250,6 +239,7 @@ export default function AlmanackArchivePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              className="space-y-0"
             >
               {filteredEntries.map((entry, index) => (
                 <ArchiveCard key={entry.key} entry={entry} index={index} />
@@ -261,12 +251,12 @@ export default function AlmanackArchivePage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mt-16 py-28 flex flex-col items-center justify-center text-center"
+              className="mt-16 flex flex-col items-center justify-center py-28 text-center"
             >
-              <p className="text-white/30 font-semibold text-base mb-2">
+              <p className="mb-2 text-[15px] font-semibold tracking-[-0.01em] text-white/32">
                 {searchTerm ? "No matching entries" : "The archive is empty"}
               </p>
-              <p className="text-white/15 text-sm max-w-xs leading-relaxed">
+              <p className="max-w-xs text-[13px] leading-[1.8] tracking-[-0.01em] text-white/16">
                 {searchTerm
                   ? "Try a different search term."
                   : "Execute trades to generate behavioral analysis entries."}
@@ -274,7 +264,7 @@ export default function AlmanackArchivePage() {
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="mt-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white/20 hover:text-white/45 transition-colors"
+                  className="mt-5 text-[10px] font-bold uppercase tracking-[0.25em] text-white/20 transition-colors hover:text-white/42"
                 >
                   Clear filter
                 </button>
